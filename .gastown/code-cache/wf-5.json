@@ -211,24 +211,24 @@
     "content": "{\n  \"name\": \"playwright-tests\",\n  \"version\": \"1.0.0\",\n  \"lockfileVersion\": 3,\n  \"requires\": true,\n  \"packages\": {\n    \"\": {\n      \"name\": \"playwright-tests\",\n      \"version\": \"1.0.0\",\n      \"description\": \"Playwright E2E tests\",\n      \"devDependencies\": {\n        \"@playwright/test\": \"1.62.1\"\n      }\n    }\n  }\n}\n",
     "md5": "75421ef2050e7fd1eb42e07597cb69a2",
     "validated": true,
-    "validated_at": "2026-11-24T20:31:58Z",
-    "created_at": "2026-11-24T20:31:58Z",
+    "validated_at": "2026-11-24T20:37:24Z",
+    "created_at": "2026-11-24T20:37:24Z",
     "design_fingerprint": "077fc57b02aa9e2e76f39e26116cca2c"
   },
   "3:taskboard/package.json": {
     "content": "{\n  \"name\": \"playwright-tests\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Playwright E2E tests\",\n  \"scripts\": {\n    \"test\": \"npx playwright test --project=chromium\"\n  },\n  \"devDependencies\": {\n    \"@playwright/test\": \"1.62.1\"\n  }\n}\n",
     "md5": "e30a1da4a947e9ac00e1af486b7236fb",
     "validated": true,
-    "validated_at": "2026-11-24T20:31:58Z",
-    "created_at": "2026-11-24T20:31:58Z",
+    "validated_at": "2026-11-24T20:37:24Z",
+    "created_at": "2026-11-24T20:37:24Z",
     "design_fingerprint": "077fc57b02aa9e2e76f39e26116cca2c"
   },
   "3:taskboard/playwright.config.ts": {
-    "content": "import { defineConfig, devices } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: './e2e',\n  timeout: 10000,\n  fullyParallel: true,\n  forbidOnly: !!process.env.CI,\n  retries: 0,\n  workers: process.env.CI ? 1 : undefined,\n  reporter: [['html', { open: 'never' }], ['list']],\n  use: {\n    baseURL: process.env.BASE_URL || 'http://localhost:8080',\n    trace: 'on-first-retry',\n  },\n  projects: [\n    {\n      name: 'chromium',\n      use: {\n        ...devices['Desktop Chrome'],\n        launchOptions: {\n          args: [\n            '--disable-features=HttpsUpgrades,HttpsFirstModeV2,AutomaticHttpsDefault,AutomaticHttpsDefaultEnabled,HttpsOnlyMode',\n            '--ignore-certificate-errors',\n          ],\n        },\n      },\n    },\n  ],\n});",
-    "md5": "8948a398d72634de3a06ae213ca18ffa",
+    "content": "import { defineConfig, devices } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: './playwright',\n  timeout: 10000,\n  fullyParallel: true,\n  forbidOnly: !!process.env.CI,\n  retries: 0,\n  workers: process.env.CI ? 1 : undefined,\n  reporter: [['html', { open: 'never' }], ['list']],\n  use: {\n    baseURL: process.env.BASE_URL || 'http://localhost:8080',\n    trace: 'on-first-retry',\n  },\n  projects: [\n    {\n      name: 'chromium',\n      use: {\n        ...devices['Desktop Chrome'],\n        launchOptions: {\n          args: [\n            '--disable-features=HttpsUpgrades,HttpsFirstModeV2,AutomaticHttpsDefault,AutomaticHttpsDefaultEnabled,HttpsOnlyMode',\n            '--ignore-certificate-errors',\n          ],\n        },\n      },\n    },\n  ],\n});",
+    "md5": "d26d8a45951cfc450c508eb8e633ead0",
     "validated": true,
-    "validated_at": "2026-11-24T20:31:58Z",
-    "created_at": "2026-11-24T20:31:58Z",
+    "validated_at": "2026-11-24T20:37:24Z",
+    "created_at": "2026-11-24T20:37:24Z",
     "design_fingerprint": "077fc57b02aa9e2e76f39e26116cca2c"
   }
 }
