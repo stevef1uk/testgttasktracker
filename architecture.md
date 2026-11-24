@@ -85,17 +85,16 @@ PostgreSQL runtime launch command from SPEC:
 | `GET` | `/api/ready` | Readiness check (verifies database ping/connection) |
 | `GET` | `/api/projects` | List all projects |
 | `POST` | `/api/projects` | Create a new project (JSON body: `{"name":"..."}`) |
-| `GET` | `/api/projects/{project_id}` | Get project details by ID |
 | `DELETE` | `/api/projects/{project_id}` | Delete project and all associated tasks |
 | `GET` | `/api/projects/{project_id}/tasks` | List tasks for a project (optional query params: `status`, `priority`) |
 | `POST` | `/api/projects/{project_id}/tasks` | Create task under project (JSON: `{"title":"...","description":"...","priority":"..."}`) |
 | `PATCH` | `/api/tasks/{task_id}` | Update task title, description, status, or priority |
 | `DELETE` | `/api/tasks/{task_id}` | Delete a task |
-| `GET` | `/` | Serve index.html SPA |
+| `GET` | `/` | Serve server-rendered HTML page (`index.html` via `html/template`) |
 | `GET` | `/static/*` | Serve embedded static assets (`app.js`, `style.css`) |
 
 ### Server Wiring Pattern
-1. Entrypoint `taskboard/cmd/taskboard/main.go` parses CLI flags and environment variables using `taskboard/internal/config/config.go`.
+1. Entrypoint `taskboard/cmd/taskboard/main.go` parses configuration settings from environment variables using `taskboard/internal/config/config.go`.
 2. Based on TASKBOARD_DB_DRIVER, instantiates SQLite or PostgreSQL store and runs schema setup.
 3. Instantiates HTTP app using `taskboard/internal/web/app.go` and `taskboard/web/assets.go`.
 4. Registers REST routes and static file handler on standard library `net/http` router.
@@ -106,8 +105,8 @@ PostgreSQL runtime launch command from SPEC:
 
 ### Application Dockerfile (`taskboard/Dockerfile`)
 1. Multi-stage build process:
-   - Builder stage: Base image `golang:1.24-alpine`. Compiles `taskboard/cmd/taskboard/main.go` into static binary.
-   - Runtime stage: Base image `alpine:3.20`. Copies compiled binary, sets non-root user UID 10001.
+   - Builder stage: Pinned Go builder image (`golang:1.25-alpine`). Compiles `./cmd/taskboard` with `CGO_ENABLED=0` and `GOOS=linux`, supporting target architectures (`linux/amd64`, `linux/arm64`).
+   - Final runtime stage: Base image (`alpine:3.20`) with CA certificates installed (`ca-certificates`). Copies compiled static binary, sets non-root user UID 10001, and embeds runtime assets.
 2. Exposed port: `EXPOSE 8080`.
 3. Sets environment variable `TASKBOARD_HOST=0.0.0.0`.
 4. Entrypoint directive: `ENTRYPOINT ["/app/taskboard"]` or `CMD ["/app/taskboard"]`.
