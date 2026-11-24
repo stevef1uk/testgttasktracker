@@ -3,14 +3,6 @@
   "entries": [
     {
       "stack": "go",
-      "rule": "Avoid in config.go: internal/config/config_test.go:12:14: undefined: LoadConfig",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/config/config.go",
-      "hits": 1,
-      "updated_at": "2026-11-24T17:47:29Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in sqlite.go: internal/store/sqlite_test.go:9:35: undefined: SQLiteStore",
       "source": "verify_fix",
       "bead_path": "taskboard/internal/store/sqlite.go",
@@ -62,6 +54,13 @@
       "bead_path": "taskboard/cmd/taskboard/main.go",
       "hits": 1,
       "updated_at": "2026-11-24T18:44:35Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-me0",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-24T21:58:58Z"
     }
   ]
 }
