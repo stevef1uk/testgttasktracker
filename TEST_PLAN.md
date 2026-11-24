@@ -88,6 +88,7 @@ Scenarios:
 - Project list returns [] when empty and ascending ID order otherwise; delete returns 204 with empty body, then 404 for missing.
 - Malformed JSON and invalid IDs return documented 400 or 404.
 - Storage failure returns safe 500 JSON with no SQL text.
+- Project list storage failure returns 500 JSON, never an empty array.
 Assertions:
 - Decoded JSON values, keys, and types match SPEC; whitespace is not asserted.
 - Status codes and Content-Type are exact; 204 body length is 0.
@@ -103,9 +104,15 @@ Scenarios:
 - PATCH with a nonempty subset updates only those fields; empty PATCH and explicit null values return 400.
 - Task list filters by status, priority, and both; invalid filter values return 400.
 - Missing project returns 404 on task list and create; missing task returns 404 on patch and delete.
+- Over-length title (121 runes) and description (1001 runes) on task create and PATCH return 400 through the HTTP endpoints; blank title on create and PATCH returns 400.
+- Task storage failure on GET, POST, PATCH, and DELETE task routes returns safe generic 500 JSON with no SQL or driver text.
+- Missing static file (GET /static/missing.js) returns 404.
+- Scope note: app_test.go covers the task REST API and the HTML/static shell. It extends the phase-1-app api_test.go contract for project routes and is owned by bead ta-8qv.
 Assertions:
 - Decoded task JSON matches expected values; updated_at changes on PATCH.
 - Filtered lists contain exactly the expected IDs in ascending order.
+- Over-length and blank rejections return 400 with a single {"error": ...} object; 500 bodies contain no SQL or driver text.
+- Missing static file returns 404.
 
 Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets are served and nonempty.
 Level: integration
@@ -114,10 +121,14 @@ Bead ID: ta-jl3
 Phase: phase-2-kanban
 Scenarios:
 - Root page contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
+- Status filter options are exactly all, todo, doing, done; priority filter options are exactly all, low, medium, high.
+- Root HTML references /static/app.js and /static/style.css as embedded assets.
 - Static app.js and style.css return 200 with nonempty bodies.
 Assertions:
 - Status 200 and Content-Type text/html for the root page; expected substrings present.
 - Static bodies have nonzero length and expected content types.
+- Filter option values and labels match the SPEC section 7 enums in the rendered markup.
+- Asset references in the HTML match the served /static paths exactly.
 
 ### phase-3-browser
 Requirement: Browser E2E: real clicks, typing, and selections drive the UI; project and task creation, Move forward from To Do to Doing to Done, delete, and priority filter reset are asserted via DOM and API state.
