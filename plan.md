@@ -156,3 +156,15 @@ Active phase: `phase-1-app` (PostgreSQL store and runnable project API). Phase v
 ## Phase context
 
 Active delivery phase `phase-1-app` only. Later phases start automatically after QA `all_passed`.
+
+## Review resolution (phase-1-app rework)
+
+- The QA finding cites a bead that `bd show` reports as not found, and that does not appear in `bd list --limit=0 --all`. It is stale and has no open or in-progress owner.
+- `taskboard/internal/web/ui_content_test.go` is not in the phase-1-app `required_files`. It appears in SPEC.md and architecture.md only for later delivery phases, so it is out of scope for this phase.
+- No new bead is created for this finding. The 9 phase-1-app implement beads listed in the Bead map above remain the complete set for this phase.
+- Verification for every bead remains `cd taskboard && go test ./...`.
+- `ui_content_test.go` will be planned by the phase that owns it, when that phase becomes active.
+
+## Future considerations
+
+- UI content assertions (TaskBoard title, project form, Kanban column headers, static content types) belong to the later phase that owns `ui_content_test.go`.
