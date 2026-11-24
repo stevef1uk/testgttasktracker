@@ -51,7 +51,7 @@ Assertions:
 Requirement: Shared store contract (project and task CRUD, filters, cascade, Unicode checks, parameterization) behaves identically on SQLite; PostgreSQL uses advisory-lock schema setup and the same contract when configured.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: pending (no phase-1-app bead in bd list --limit=0 ; Planner to create and map in plan.md)
+Bead ID: ta-444
 Phase: phase-1-app
 Scenarios:
 - Fresh schema empty; repeated init idempotent.
@@ -65,7 +65,7 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: pending (no phase-1-app bead in bd list; Planner to create and map in plan.md)
+Bead ID: ta-pn0
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
@@ -79,7 +79,7 @@ Assertions:
 Requirement: Project REST API: GET api/health, GET api/ready, GET and POST api/projects, DELETE api/projects/{project_id} with SPEC section 6 status codes and JSON shapes.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: pending (no phase-1-app bead in bd list; Planner to create and map in plan.md)
+Bead ID: ta-dyt
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
