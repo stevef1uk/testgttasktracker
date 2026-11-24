@@ -3,14 +3,6 @@
   "entries": [
     {
       "stack": "go",
-      "rule": "Avoid in model.go: internal/model/model_test.go:35:12: undefined: NormalizeProjectName",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/model/model.go",
-      "hits": 1,
-      "updated_at": "2026-11-24T18:03:37Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Repair implementation beads: ta-zmd",
       "source": "qa_rework",
       "hits": 1,
@@ -60,6 +52,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-24T22:00:52Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: task execution error: no structured outcome after 20 turns",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-24T22:02:53Z"
     }
   ]
 }
