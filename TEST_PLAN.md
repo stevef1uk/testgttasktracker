@@ -14,7 +14,7 @@ Scenarios:
 - Port 0, 65536, and non-numeric values error; 1 and 65535 pass.
 - postgres driver with empty TASKBOARD_DATABASE_URL errors with no SQLite fallback.
 Assertions:
-- Returned Config fields equal expected values (t.Setenv per case).
+- Config fields equal expected values (t.Setenv per case).
 - Error text does not contain the URL or password substring.
 
 Requirement: Domain validation: project name trimmed to 1-80 code points; task title trimmed to 1-120; description verbatim up to 1000; status and priority enums exact.
@@ -27,31 +27,31 @@ Scenarios:
 - Whitespace-only name and title are rejected; description is not trimmed.
 - Each valid status and priority passes; one invalid value per enum fails.
 Assertions:
-- utf8.RuneCountInString semantics: exactly 80 multibyte runes pass, 81 fail.
-- Validators return errors for invalid input and nil for valid input.
+- Exactly 80 multibyte runes pass for names; 81 fail (utf8.RuneCountInString semantics).
+- Validators return nil for valid input and an error for invalid input.
 
-Requirement: SQLite store creates the schema idempotently, enforces foreign keys on every pooled connection, uses a 5000 ms busy timeout, and persists across reopen.
+Requirement: SQLite store creates schema idempotently, enforces foreign keys on every pooled connection, uses a 5000 ms busy timeout, and persists across reopen.
 Level: integration
 Test file: taskboard/internal/store/sqlite_test.go
 Bead ID: ta-zmd
 Phase: phase-1-core
 Scenarios:
-- Fresh file schema is empty; second init on same file keeps existing rows.
+- Fresh file schema is empty; second init on the same file keeps existing rows.
 - Create and list projects in ascending ID order; tasks default to todo and medium.
 - Filters by status, priority, and both combine with AND; list order ascending ID.
-- Patch changes only supplied fields; delete project cascades to its tasks.
+- Patch changes only supplied fields; deleting a project cascades to its tasks.
 - Insert task with unknown project_id fails with a foreign key error.
 - Close and reopen the same t.TempDir() file preserves data.
 Assertions:
 - Returned rows equal expected values; timestamps parse as UTC RFC3339.
 - Test DB path is under t.TempDir(), never taskboard.db.
-- Query placeholders are ? and user input is passed as parameters only.
+- Queries use ? placeholders; user input is passed only as parameters.
 
 ### phase-1-app
 Requirement: Shared store contract (project and task CRUD, filters, cascade, Unicode checks, parameterization) behaves identically on SQLite; PostgreSQL uses advisory-lock schema setup and the same contract when configured.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: pending (no phase-1-app bead in bd list --limit=0 ; Planner to create and map in plan.md)
 Phase: phase-1-app
 Scenarios:
 - Fresh schema empty; repeated init idempotent.
@@ -60,29 +60,29 @@ Scenarios:
 - Unicode code-point boundaries; SQL-injection-style names stored as literal text.
 Assertions:
 - Store results equal expected values and ordering.
-- No schema reset or DROP statement runs during repeated init.
+- No DROP or schema reset statement runs during repeated init.
 
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: pending (no phase-1-app bead in bd list; Planner to create and map in plan.md)
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
 - Concurrent schema init is safe under advisory lock.
-- Cascade delete, ordering, filters, UTC timestamps, and identity IDs match SQLite behavior.
+- Cascade delete, ordering, filters, UTC timestamps, and identity IDs match SQLite.
 - Test objects use unique names or an isolated schema and clean up only their own data.
 Assertions:
-- Same expected values as SQLite contract tests.
+- Same expected values as the SQLite contract tests.
 - Error output does not include the connection URL.
 
 Requirement: Project REST API: GET api/health, GET api/ready, GET and POST api/projects, DELETE api/projects/{project_id} with SPEC section 6 status codes and JSON shapes.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: pending (no phase-1-app bead in bd list; Planner to create and map in plan.md)
 Phase: phase-1-app
 Scenarios:
-- Health returns exact {"status":"ok"} with 200 independent of DB state.
+- Health returns {"status":"ok"} with 200 independent of DB state.
 - Ready returns {"status":"ready"} on healthy SQLite and 503 {"error":"database unavailable"} on failure.
 - Project create returns 201 with JSON; blank name returns 400 with an error object.
 - Project list returns [] when empty and ascending ID order otherwise; delete returns 204 with empty body, then 404 for missing.
@@ -107,13 +107,13 @@ Assertions:
 - Decoded task JSON matches expected values; updated_at changes on PATCH.
 - Filtered lists contain exactly the expected IDs in ascending order.
 
-Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done Kanban headings; static assets are served and nonempty.
+Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets are served and nonempty.
 Level: integration
 Test file: taskboard/internal/web/ui_content_test.go
 Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
 Phase: phase-2-kanban
 Scenarios:
-- Root page body contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
+- Root page contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
 - Static app.js and style.css return 200 with nonempty bodies.
 Assertions:
 - Status 200 and Content-Type text/html for the root page; expected substrings present.
@@ -133,5 +133,5 @@ Scenarios:
 - Create two tasks of different priority, select high in the filter, verify only the high task is visible, reset to all, verify both visible.
 Assertions:
 - Visible DOM text and card counts change after each click or selection.
-- API GET confirms the persisted status and priority after each action.
+- API GET confirms persisted status and priority after each action.
 - Test projects are cleaned up before and after each test.
