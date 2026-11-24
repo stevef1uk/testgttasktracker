@@ -10,11 +10,12 @@
     "qa_verify_command": "cd taskboard && go test ./...",
     "test_runner": "go",
     "required_files": [
-      "taskboard/internal/store/schema.go",
       "taskboard/go.mod",
       "taskboard/go.sum",
       "taskboard/README.md",
       "taskboard/.gitignore",
+      "taskboard/.dockerignore",
+      "taskboard/Dockerfile",
       "taskboard/cmd/taskboard/main.go",
       "taskboard/internal/config/config.go",
       "taskboard/internal/model/model.go",
@@ -31,71 +32,116 @@
       "taskboard/web/templates/index.html",
       "taskboard/web/static/app.js",
       "taskboard/web/static/style.css",
+      "taskboard/deploy/k8s/deployment.yaml",
       "taskboard/deploy/k8s/service.yaml",
       "taskboard/deploy/k8s/secret.example.yaml",
-      "taskboard/web/assets.go",
       "taskboard/package.json",
       "taskboard/package-lock.json",
       "taskboard/playwright.config.ts",
       "taskboard/playwright/taskboard.spec.ts",
-      "taskboard/deploy/k8s/deployment.yaml",
-      "taskboard/Dockerfile",
+      "taskboard/web/assets.go",
       "taskboard/docker-compose.yml",
-      "taskboard/.dockerignore"
+      "taskboard/internal/store/schema.go"
     ],
     "delivery_phases": [
       {
-        "id": "final-integration-and-release-qa",
-        "title": "Final integration and release QA",
-        "required_files": null,
-        "qa_verify_command": "cd taskboard && echo 'verify ok (no automated tests for this phase)'",
-        "spec_focus": "Final integration and release QA"
-      },
-      {
-        "id": "tasks-kanban-ui-and-full-go-tests-1",
-        "title": "Tasks, Kanban UI, and full Go tests (part 1/2)",
+        "id": "phase-1-core",
+        "title": "Go foundation, configuration, models, SQLite store",
         "required_files": [
-          "taskboard/internal/store/schema.go",
           "taskboard/go.mod",
           "taskboard/go.sum",
           "taskboard/README.md",
           "taskboard/.gitignore",
-          "taskboard/cmd/taskboard/main.go",
           "taskboard/internal/config/config.go",
           "taskboard/internal/model/model.go",
           "taskboard/internal/store/store.go",
-          "taskboard/internal/store/sqlite.go",
+          "taskboard/internal/store/sqlite.go"
+        ],
+        "qa_verify_command": "cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store",
+        "spec_focus": "Go foundation, configuration, models, SQLite store"
+      },
+      {
+        "id": "phase-1-app",
+        "title": "PostgreSQL store and runnable project API",
+        "required_files": [
+          "taskboard/internal/store/schema.go",
           "taskboard/internal/store/postgres.go",
           "taskboard/internal/store/store_test.go",
           "taskboard/internal/store/postgres_integration_test.go",
+          "taskboard/cmd/taskboard/main.go",
           "taskboard/internal/web/app.go",
           "taskboard/internal/web/api.go",
-          "taskboard/internal/web/app_test.go",
-          "taskboard/internal/web/api_test.go",
-          "taskboard/internal/web/ui_content_test.go",
+          "taskboard/web/assets.go",
           "taskboard/web/templates/index.html",
-          "taskboard/web/static/app.js"
-        ],
-        "qa_verify_command": "cd taskboard && go test ./...",
-        "spec_focus": "Tasks, Kanban UI, and full Go tests"
-      },
-      {
-        "id": "tasks-kanban-ui-and-full-go-tests-2",
-        "title": "Tasks, Kanban UI, and full Go tests (part 2/2)",
-        "required_files": [
-          "taskboard/web/static/style.css",
-          "taskboard/deploy/k8s/service.yaml",
-          "taskboard/deploy/k8s/secret.example.yaml",
-          "taskboard/web/assets.go"
+          "taskboard/internal/web/api_test.go"
         ],
         "qa_verify_command": "cd taskboard && go test ./...",
         "depends_on": [
-          "tasks-kanban-ui-and-full-go-tests-1"
+          "phase-1-core"
         ],
-        "spec_focus": "Tasks, Kanban UI, and full Go tests"
+        "spec_focus": "PostgreSQL store and runnable project API",
+        "file_dependencies": {
+          "taskboard/cmd/taskboard/main.go": [
+            "taskboard/internal/web/app.go"
+          ],
+          "taskboard/internal/store/postgres.go": [
+            "taskboard/internal/store/store.go"
+          ],
+          "taskboard/internal/store/postgres_integration_test.go": [
+            "taskboard/internal/store/postgres.go"
+          ],
+          "taskboard/internal/store/schema.go": [
+            "taskboard/internal/store/store.go"
+          ],
+          "taskboard/internal/store/store_test.go": [
+            "taskboard/internal/store/sqlite.go"
+          ],
+          "taskboard/internal/web/api.go": [
+            "taskboard/internal/web/app.go"
+          ],
+          "taskboard/internal/web/api_test.go": [
+            "taskboard/internal/web/api.go"
+          ],
+          "taskboard/internal/web/app.go": [
+            "taskboard/internal/store/store.go",
+            "taskboard/web/assets.go"
+          ],
+          "taskboard/web/assets.go": [
+            "taskboard/web/templates/index.html"
+          ]
+        }
       },
       {
-        "id": "playwright-integration-and-browser-qa",
+        "id": "phase-2-kanban",
+        "title": "Tasks, Kanban UI, and full Go tests",
+        "required_files": [
+          "taskboard/web/static/app.js",
+          "taskboard/web/static/style.css",
+          "taskboard/internal/web/app_test.go",
+          "taskboard/internal/web/ui_content_test.go"
+        ],
+        "qa_verify_command": "cd taskboard && go test ./...",
+        "depends_on": [
+          "phase-1-app"
+        ],
+        "spec_focus": "Tasks, Kanban UI, and full Go tests",
+        "file_dependencies": {
+          "taskboard/internal/web/app_test.go": [
+            "taskboard/internal/web/app.go"
+          ],
+          "taskboard/internal/web/ui_content_test.go": [
+            "taskboard/internal/web/app.go"
+          ],
+          "taskboard/web/static/app.js": [
+            "taskboard/web/assets.go"
+          ],
+          "taskboard/web/static/style.css": [
+            "taskboard/web/assets.go"
+          ]
+        }
+      },
+      {
+        "id": "phase-3-browser",
         "title": "Playwright integration and browser QA",
         "required_files": [
           "taskboard/package.json",
@@ -103,26 +149,61 @@
           "taskboard/playwright.config.ts",
           "taskboard/playwright/taskboard.spec.ts"
         ],
-        "qa_verify_command": "cd taskboard && docker-compose down && docker-compose build --no-cache && docker-compose up --exit-code-from playwright && (docker rmi test-app:latest 2>/dev/null || true) && docker image prune -f",
-        "spec_focus": "Playwright integration and browser QA"
+        "qa_verify_command": "cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright",
+        "depends_on": [
+          "phase-2-kanban"
+        ],
+        "spec_focus": "Playwright integration and browser QA",
+        "file_dependencies": {
+          "taskboard/playwright/taskboard.spec.ts": [
+            "taskboard/playwright.config.ts"
+          ]
+        }
       },
       {
-        "id": "container-build-and-k3s-deployment-artifacts",
+        "id": "phase-4-deploy",
         "title": "Container build and k3s deployment artifacts",
         "required_files": [
-          "taskboard/deploy/k8s/deployment.yaml",
           "taskboard/Dockerfile",
           "taskboard/docker-compose.yml",
-          "taskboard/.dockerignore"
+          "taskboard/.dockerignore",
+          "taskboard/deploy/k8s/deployment.yaml",
+          "taskboard/deploy/k8s/service.yaml",
+          "taskboard/deploy/k8s/secret.example.yaml"
         ],
-        "qa_verify_command": "cd taskboard && docker compose -f docker-compose.yml down && docker compose -f docker-compose.yml build  && docker compose -f docker-compose.yml build --no-cache && docker compose -f docker-compose.yml up --exit-code-from playwright && (docker rmi test-app:latest 2>/dev/null || true) && docker image prune -f && (docker rmi test-app:latest 2>/dev/null || true) && docker image prune -f",
-        "spec_focus": "Container build and k3s deployment artifacts"
+        "qa_verify_command": "cd taskboard && go test ./... && docker build -t taskboard:local .",
+        "depends_on": [
+          "phase-3-browser"
+        ],
+        "spec_focus": "Container build and k3s deployment artifacts",
+        "file_dependencies": {
+          "taskboard/Dockerfile": [
+            "taskboard/cmd/taskboard/main.go"
+          ],
+          "taskboard/deploy/k8s/deployment.yaml": [
+            "taskboard/Dockerfile"
+          ],
+          "taskboard/docker-compose.yml": [
+            "taskboard/Dockerfile"
+          ]
+        }
+      },
+      {
+        "id": "phase-5-release",
+        "title": "Final integration and release QA",
+        "required_files": [],
+        "qa_verify_command": "cd taskboard && go test ./...",
+        "depends_on": [
+          "phase-4-deploy"
+        ],
+        "spec_focus": "Final integration and release QA"
       }
     ],
-    "active_phase_id": "tasks-kanban-ui-and-full-go-tests-1",
+    "explicit_delivery_contract": true,
+    "active_phase_id": "phase-1-core",
     "spec_summary": "",
-    "min_architecture_bytes": 4000,
-    "min_plan_bytes": 1000,
+    "min_architecture_bytes": 3200,
+    "min_plan_bytes": 800,
     "min_implementation_file_bytes": 400,
     "min_substantive_lines": 3,
     "min_test_plan_bytes": 400,
