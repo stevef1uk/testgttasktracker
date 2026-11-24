@@ -124,3 +124,18 @@ Not required this phase. The active phase `required_files` contain no entrypoint
 
 - PostgreSQL store, advisory-lock schema setup, and integration tests belong to `phase-1-app`.
 - Repository tests for the next phase are owned by that phase, not this one.
+
+## Test repair for ta-zmd: taskboard/internal/store/sqlite_test.go
+
+This section explicitly authorizes the test-file repair that blocks `ta-zmd`. `sqlite_test.go` is a companion test file of `ta-zmd` (not a separate bead, and not in `required_files`). The bead must not close until this file contains the tests below.
+
+- Path: `taskboard/internal/store/sqlite_test.go` (edit allowed under `ta-zmd`).
+- Each test uses an isolated database file from `t.TempDir()`, never `taskboard.db`.
+- Required tests:
+  - `TestCRUDProjectsAndTasks`: create, list, and delete projects; create, list, patch, and delete tasks.
+  - `TestSchemaIdempotentReinit`: open the same file twice; existing rows survive and the second open succeeds.
+  - `TestFilterStatusPriorityAND`: status-only, priority-only, and combined filters; results ordered by ascending `id`.
+  - `TestCascadeDeleteAndForeignKey`: deleting a project removes its tasks; inserting a task with an unknown `project_id` fails.
+  - `TestUTCTimestamps`: `created_at` and `updated_at` are stored as UTC ISO-8601 strings.
+  - `TestCloseReopenPersistence`: close and reopen the same file; data is preserved.
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
