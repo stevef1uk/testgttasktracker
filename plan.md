@@ -2,21 +2,21 @@
 
 Active delivery phase: `phase-1-core` (Go foundation, configuration, models, SQLite store).
 Phase verification: `cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store`
-Packages without tests must still compile. No HTTP routes, PostgreSQL code, or entrypoint belong to this phase.
+Phase-1-core owns only the 8 paths in `required_files`. It creates no test files. Packages without tests must still compile under the phase gate. Repository and behavior tests belong to `phase-1-app`. No HTTP routes, PostgreSQL code, or entrypoint belong to this phase.
 
 ## Bead map
 
 ### ta-92w: taskboard/go.mod
-- Scope: Go module manifest for the sole module `taskboard`, Go 1.25 or newer, with a pinned toolchain.
-- Architecture: `taskboard/go.mod` in Planned file layout; SPEC §2 requires a committed pinned toolchain.
-- Interfaces: module path `taskboard`; direct requirement `modernc.org/sqlite`.
+- Scope: Go module manifest for the sole module `taskboard`, with a `go` directive pinning Go 1.26.1 (satisfies SPEC's Go >=1.25 and the committed pinned-toolchain requirement).
+- Architecture: `taskboard/go.mod` in Planned file layout; SPEC §2 requires a committed pinned toolchain and committed go.mod/go.sum.
+- Interfaces: module path `taskboard`; direct requirement `modernc.org/sqlite v1.63.0`.
 - Depends on: `<none>`
 - Consumed by: ta-451, ta-93p, ta-i6d, ta-xea, ta-zmd, ta-f1f, ta-b55
 - Acceptance:
-  - `go.mod` declares `module taskboard` and a `go` directive of 1.25 or newer.
-  - A `toolchain` directive pins a specific Go toolchain version.
-  - `modernc.org/sqlite` is the SQLite driver requirement; builds run with `CGO_ENABLED=0`.
-  - The file is produced by `go mod tidy` from imports used by phase-1-core packages.
+  - `go.mod` declares `module taskboard` and `go 1.26.1` (1.25 or newer).
+  - No separate `toolchain` line is required; the `go` directive is the pin.
+  - `modernc.org/sqlite` is the only SQLite driver requirement; builds run with `CGO_ENABLED=0`.
+  - No PostgreSQL driver (`pgx`) is required in phase-1-core.
 - Verify: `cd taskboard && go mod tidy && go mod verify`
 
 ### ta-451: taskboard/go.sum
@@ -68,7 +68,7 @@ Packages without tests must still compile. No HTTP routes, PostgreSQL code, or e
   - `TASKBOARD_PORT` must be an integer 1–65535; `0`, `65536`, and non-numeric values return an error.
   - `postgres` driver with an empty `TASKBOARD_DATABASE_URL` returns an error; no silent SQLite fallback.
   - Error messages never include the full database URL or password text.
-  - Unit tests use `t.Setenv` and assert successful values and each rejected case.
+  - The package compiles under the phase gate; this bead adds no test files.
 - Verify: `cd taskboard && go test -timeout 30s -count=1 ./internal/config/...`
 
 ### ta-i6d: taskboard/internal/model/model.go
@@ -83,7 +83,7 @@ Packages without tests must still compile. No HTTP routes, PostgreSQL code, or e
   - Task description is retained verbatim and must be at most 1000 code points.
   - Length uses `utf8.RuneCountInString`; a multibyte name of exactly 80 runes passes and 81 fails.
   - Status accepts only `todo`, `doing`, `done`; priority accepts only `low`, `medium`, `high`.
-  - Tests cover boundaries (0, 1, 80, 81, 120, 121, 1000, 1001 runes), each valid enum, and one invalid value per enum.
+  - The package compiles under the phase gate; this bead adds no test files.
 - Verify: `cd taskboard && go test -timeout 30s -count=1 ./internal/model/...`
 
 ### ta-xea: taskboard/internal/store/store.go
@@ -97,7 +97,7 @@ Packages without tests must still compile. No HTTP routes, PostgreSQL code, or e
   - DDL defines `projects(id, name, created_at)` and `tasks(id, project_id, title, description, status, priority, created_at, updated_at)` with `project_id REFERENCES projects(id) ON DELETE CASCADE`.
   - DDL includes an index on `tasks(project_id)`.
   - Error constants are distinct so callers can map not-found to 404 and validation to 400.
-  - Behavior is proven through the SQLite implementation in ta-zmd; no test-only database modes are added here.
+  - The package compiles under the phase gate; this bead adds no test files and no test-only database modes.
 - Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
 
 ### ta-zmd: taskboard/internal/store/sqlite.go
@@ -112,8 +112,9 @@ Packages without tests must still compile. No HTTP routes, PostgreSQL code, or e
   - All SQL uses `?` placeholders; no user input is concatenated into SQL.
   - Schema creation is idempotent: running it twice on the same file succeeds and keeps existing rows.
   - Deleting a project removes its tasks (cascade); inserting a task with an unknown `project_id` fails with a foreign key error.
-  - Tests use an isolated file from `t.TempDir()`, never `taskboard.db`; closing and reopening the same file preserves data.
   - Filters by status, priority, and both together combine with AND; list order is ascending `id`.
+  - Timestamps are stored as UTC ISO-8601 strings.
+  - The package compiles under the phase gate; behavioral tests for these rules belong to `phase-1-app` (`taskboard/internal/store/store_test.go`), and this bead adds no test files.
 - Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
 
 ## Integration contract
@@ -123,19 +124,4 @@ Not required this phase. The active phase `required_files` contain no entrypoint
 ## Future considerations
 
 - PostgreSQL store, advisory-lock schema setup, and integration tests belong to `phase-1-app`.
-- Repository tests for the next phase are owned by that phase, not this one.
-
-## Test repair for ta-zmd: taskboard/internal/store/sqlite_test.go
-
-This section explicitly authorizes the test-file repair that blocks `ta-zmd`. `sqlite_test.go` is a companion test file of `ta-zmd` (not a separate bead, and not in `required_files`). The bead must not close until this file contains the tests below.
-
-- Path: `taskboard/internal/store/sqlite_test.go` (edit allowed under `ta-zmd`).
-- Each test uses an isolated database file from `t.TempDir()`, never `taskboard.db`.
-- Required tests:
-  - `TestCRUDProjectsAndTasks`: create, list, and delete projects; create, list, patch, and delete tasks.
-  - `TestSchemaIdempotentReinit`: open the same file twice; existing rows survive and the second open succeeds.
-  - `TestFilterStatusPriorityAND`: status-only, priority-only, and combined filters; results ordered by ascending `id`.
-  - `TestCascadeDeleteAndForeignKey`: deleting a project removes its tasks; inserting a task with an unknown `project_id` fails.
-  - `TestUTCTimestamps`: `created_at` and `updated_at` are stored as UTC ISO-8601 strings.
-  - `TestCloseReopenPersistence`: close and reopen the same file; data is preserved.
-- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
+- Repository tests (`taskboard/internal/store/store_test.go`) and their SQLite fixtures are owned by `phase-1-app`, not this phase.
