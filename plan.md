@@ -5,7 +5,13 @@ Phase verification: `cd taskboard && go test ./...`
 
 ## Scope
 
-This phase owns exactly four first-delivery files. Each has one open bead from `bd list --limit=0 ` this session. Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) are already delivered; this phase only extends `taskboard/web/assets.go` to embed `static/*` and does not create a bead for it.
+This phase owns exactly four first-delivery files, each with one implement bead:
+- ta-n4t: taskboard/web/static/app.js (closed by a prior run; re-verify on rework)
+- ta-9t7: taskboard/web/static/style.css (closed by a prior run; re-verify on rework)
+- ta-8qv: taskboard/internal/web/app_test.go (closed by a prior run; re-verify on rework)
+- ta-jl3: taskboard/internal/web/ui_content_test.go (in progress; the only open phase-2 bead)
+
+Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) are already delivered. ta-pk0 (index.html) and ta-1ri (app.go) are closed phase-1 beads and are referenced only as dependencies. This phase extends `taskboard/web/assets.go` to embed `static/*` but creates no bead for it.
 
 ## Bead map
 
@@ -14,7 +20,7 @@ This phase owns exactly four first-delivery files. Each has one open bead from `
 - Architecture: architecture.md phase-2-kanban; SPEC.md sections 6 and 7; served at /static/app.js.
 - Interfaces: none exported (browser script). Consumes the REST routes in SPEC.md section 6 and DOM ids in taskboard/web/templates/index.html.
 - Depends on: ta-pk0 (taskboard/web/templates/index.html), ta-1ri (taskboard/internal/web/app.go), taskboard/web/assets.go (embed of static/*).
-- Consumed by: none in this phase.
+- Consumed by: ta-8qv (taskboard/internal/web/app_test.go), ta-jl3 (taskboard/internal/web/ui_content_test.go).
 - Acceptance:
   - User text is inserted via textContent or safe DOM APIs only; no innerHTML interpolation of user input.
   - Move forward is hidden or disabled for done tasks.
