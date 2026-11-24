@@ -190,7 +190,7 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-1-app",
+    "active_phase_id": "phase-2-kanban",
     "spec_summary": "",
     "min_architecture_bytes": 3200,
     "min_plan_bytes": 800,
