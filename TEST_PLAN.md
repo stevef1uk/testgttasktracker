@@ -96,7 +96,7 @@ Assertions:
 Requirement: Task REST API (list, create, patch, delete) with server-owned status, IDs, and timestamps, nonempty PATCH, explicit-null rejection, and AND-combined filters.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
+Bead ID: ta-8qv
 Phase: phase-2-kanban
 Scenarios:
 - Task create defaults status todo and priority medium; client-supplied status, id, and timestamps are ignored.
@@ -110,7 +110,7 @@ Assertions:
 Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets are served and nonempty.
 Level: integration
 Test file: taskboard/internal/web/ui_content_test.go
-Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
+Bead ID: ta-jl3
 Phase: phase-2-kanban
 Scenarios:
 - Root page contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
