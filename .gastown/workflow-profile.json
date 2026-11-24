@@ -39,9 +39,7 @@
       "taskboard/package-lock.json",
       "taskboard/playwright.config.ts",
       "taskboard/playwright/taskboard.spec.ts",
-      "taskboard/web/assets.go",
-      "taskboard/docker-compose.yml",
-      "taskboard/internal/store/schema.go"
+      "taskboard/web/assets.go"
     ],
     "delivery_phases": [
       {
@@ -64,7 +62,6 @@
         "id": "phase-1-app",
         "title": "PostgreSQL store and runnable project API",
         "required_files": [
-          "taskboard/internal/store/schema.go",
           "taskboard/internal/store/postgres.go",
           "taskboard/internal/store/store_test.go",
           "taskboard/internal/store/postgres_integration_test.go",
@@ -89,9 +86,6 @@
           ],
           "taskboard/internal/store/postgres_integration_test.go": [
             "taskboard/internal/store/postgres.go"
-          ],
-          "taskboard/internal/store/schema.go": [
-            "taskboard/internal/store/store.go"
           ],
           "taskboard/internal/store/store_test.go": [
             "taskboard/internal/store/sqlite.go"
@@ -165,7 +159,6 @@
         "title": "Container build and k3s deployment artifacts",
         "required_files": [
           "taskboard/Dockerfile",
-          "taskboard/docker-compose.yml",
           "taskboard/.dockerignore",
           "taskboard/deploy/k8s/deployment.yaml",
           "taskboard/deploy/k8s/service.yaml",
@@ -181,9 +174,6 @@
             "taskboard/cmd/taskboard/main.go"
           ],
           "taskboard/deploy/k8s/deployment.yaml": [
-            "taskboard/Dockerfile"
-          ],
-          "taskboard/docker-compose.yml": [
             "taskboard/Dockerfile"
           ]
         }

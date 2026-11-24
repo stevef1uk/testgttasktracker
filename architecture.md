@@ -6,15 +6,13 @@ TaskBoard is a task management web application written in Go (Go 1.25+). Users c
 Components:
 - `taskboard/internal/config/config.go` parses configuration settings from environment variables.
 - `taskboard/internal/model/model.go` defines Project and Task structs and Unicode length and enum validation.
-- `taskboard/internal/store/store.go` defines the shared Store interface and repository errors.
-- `taskboard/internal/store/schema.go` defines schema DDL statements for SQLite and PostgreSQL.
+- `taskboard/internal/store/store.go` defines the shared Store interface, repository errors, and SQL schema DDL statements.
 - `taskboard/internal/store/sqlite.go` implements SQLite storage with foreign key PRAGMA enforcement and 5000ms busy timeout.
 - `taskboard/internal/store/postgres.go` implements PostgreSQL storage with transactional advisory locks for schema setup.
 - `taskboard/web/assets.go` embeds HTML templates and static assets.
 - `taskboard/internal/web/app.go` and `taskboard/internal/web/api.go` build the HTTP router and REST API endpoints.
 - `taskboard/cmd/taskboard/main.go` serves as the entrypoint for startup, configuration loading, database initialization, and graceful SIGTERM shutdown.
 - `taskboard/deploy/k8s/deployment.yaml`, `taskboard/deploy/k8s/service.yaml`, and `taskboard/deploy/k8s/secret.example.yaml` provide Kubernetes manifests for deployment.
-- `taskboard/docker-compose.yml` provides a local integration test harness.
 - `taskboard/playwright/taskboard.spec.ts` provides Playwright browser E2E test scenarios.
 
 Runtime launch command from SPEC:
@@ -30,12 +28,10 @@ PostgreSQL runtime launch command from SPEC:
 - `taskboard/.gitignore`
 - `taskboard/.dockerignore`
 - `taskboard/Dockerfile`
-- `taskboard/docker-compose.yml`
 - `taskboard/cmd/taskboard/main.go`
 - `taskboard/internal/config/config.go`
 - `taskboard/internal/model/model.go`
 - `taskboard/internal/store/store.go`
-- `taskboard/internal/store/schema.go`
 - `taskboard/internal/store/sqlite.go`
 - `taskboard/internal/store/postgres.go`
 - `taskboard/internal/store/store_test.go`
@@ -63,8 +59,7 @@ PostgreSQL runtime launch command from SPEC:
 | --- | --- | --- |
 | `taskboard/internal/config/config.go` | Config struct, LoadConfig function | Database queries, HTTP handlers |
 | `taskboard/internal/model/model.go` | Project struct, Task struct, validation functions | SQL DDL statements, HTTP responses |
-| `taskboard/internal/store/store.go` | Store interface, repository error constants | HTTP routing logic |
-| `taskboard/internal/store/schema.go` | Schema DDL constants for SQLite and Postgres | Store interface logic |
+| `taskboard/internal/store/store.go` | Store interface, repository error constants, DDL constants | HTTP routing logic |
 | `taskboard/internal/store/sqlite.go` | NewSQLiteStore function | Postgres SQL dialect syntax |
 | `taskboard/internal/store/postgres.go` | NewPostgresStore function | SQLite PRAGMA commands |
 | `taskboard/web/assets.go` | FS embed variable | Business logic |
@@ -77,7 +72,6 @@ PostgreSQL runtime launch command from SPEC:
 | `taskboard/deploy/k8s/deployment.yaml` | Kubernetes Deployment specification | Application code |
 | `taskboard/deploy/k8s/service.yaml` | Kubernetes Service specification | Secrets |
 | `taskboard/deploy/k8s/secret.example.yaml` | Kubernetes Secret example template | Real production passwords |
-| `taskboard/docker-compose.yml` | Local integration test container orchestration | K8s manifests |
 | `taskboard/playwright.config.ts` | Playwright test runner configuration | Backend Go unit tests |
 | `taskboard/playwright/taskboard.spec.ts` | Playwright E2E browser tests | Go unit test assertions |
 
@@ -118,12 +112,11 @@ PostgreSQL runtime launch command from SPEC:
 ### Kubernetes Setup
 - `taskboard/deploy/k8s/deployment.yaml` defines single replica deployment referencing TASKBOARD_DB_DRIVER and TASKBOARD_DATABASE_URL from secret database-url. Liveness probe targets GET /api/health and readiness probe targets GET /api/ready.
 - `taskboard/deploy/k8s/service.yaml` exposes port 8080 as ClusterIP Service.
-- `taskboard/docker-compose.yml` provides a local container environment for integration testing.
 
 ## Unit tests
 - `taskboard/internal/store/store_test.go`: SQLite table initialization, CRUD for projects and tasks, cascading deletions, Unicode length checks, and filtering.
 - `taskboard/internal/web/api_test.go`: HTTP REST endpoint behavior, status codes (200, 201, 204, 400, 404, 500, 503), error JSON responses, filtering combinations.
-- `taskboard/internal/web/app_test.go`: HTML template rendering on GET /api/health, content types for static assets.
+- `taskboard/internal/web/app_test.go`: HTML template rendering on GET /, content types for static assets.
 - `taskboard/internal/web/ui_content_test.go`: Specific HTML structure checks for forms, headings, and Kanban columns.
 
 ## Integration and testing
@@ -158,9 +151,6 @@ Command to execute Playwright E2E tests:
 - Integration tests in `taskboard/internal/store/postgres_integration_test.go` execute when `TASKBOARD_TEST_POSTGRES_URL` environment variable is defined.
 - Exercises the store interface against a live PostgreSQL database, checking transactional advisory locks during schema setup, PostgreSQL identity primary key generation, UTC timestamp precision, parameter placeholder `$1` behavior, and foreign key cascade deletion.
 
-### Local Container Integration Harness
-- `taskboard/docker-compose.yml` provides a multi-container environment with TaskBoard and PostgreSQL for local integration verification.
-
 Command to build container image:
 `cd taskboard && docker build -t taskboard:local .`
 
@@ -188,7 +178,6 @@ delivery_phases:
     title: PostgreSQL store and runnable project API
     spec_focus: PostgreSQL store and runnable project API
     required_files:
-      - taskboard/internal/store/schema.go
       - taskboard/internal/store/postgres.go
       - taskboard/internal/store/store_test.go
       - taskboard/internal/store/postgres_integration_test.go
@@ -202,8 +191,6 @@ delivery_phases:
     depends_on:
       - phase-1-core
     file_dependencies:
-      taskboard/internal/store/schema.go:
-        - taskboard/internal/store/store.go
       taskboard/internal/store/postgres.go:
         - taskboard/internal/store/store.go
       taskboard/internal/store/store_test.go:
@@ -263,7 +250,6 @@ delivery_phases:
     spec_focus: Container build and k3s deployment artifacts
     required_files:
       - taskboard/Dockerfile
-      - taskboard/docker-compose.yml
       - taskboard/.dockerignore
       - taskboard/deploy/k8s/deployment.yaml
       - taskboard/deploy/k8s/service.yaml
@@ -274,8 +260,6 @@ delivery_phases:
     file_dependencies:
       taskboard/Dockerfile:
         - taskboard/cmd/taskboard/main.go
-      taskboard/docker-compose.yml:
-        - taskboard/Dockerfile
       taskboard/deploy/k8s/deployment.yaml:
         - taskboard/Dockerfile
 
@@ -295,11 +279,10 @@ delivery_phases:
 - Create project layout and Go module in `taskboard/go.mod` and `taskboard/go.sum`.
 - Create configuration parsing in `taskboard/internal/config/config.go` handling environment variables TASKBOARD_DB_DRIVER, TASKBOARD_DB_PATH, TASKBOARD_DATABASE_URL, TASKBOARD_HOST, and TASKBOARD_PORT.
 - Implement core domain models and unicode length validation rules in `taskboard/internal/model/model.go`.
-- Define shared Store repository interface in `taskboard/internal/store/store.go`.
+- Define shared Store repository interface and DDL constants in `taskboard/internal/store/store.go`.
 - Implement SQLite persistence with foreign keys PRAGMA and busy timeout in `taskboard/internal/store/sqlite.go`.
 
 ### phase-1-app
-- Provide DDL statements in `taskboard/internal/store/schema.go`.
 - Implement PostgreSQL database engine with transactional advisory lock table creation in `taskboard/internal/store/postgres.go`.
 - Implement unit tests for SQLite store contract in `taskboard/internal/store/store_test.go` and optional PostgreSQL integration tests in `taskboard/internal/store/postgres_integration_test.go`.
 - Construct web server application setup and project REST API routes in `taskboard/internal/web/app.go` and `taskboard/internal/web/api.go`.
@@ -321,7 +304,6 @@ delivery_phases:
 
 ### phase-4-deploy
 - Write multi-stage Dockerfile in `taskboard/Dockerfile` building non-root binary.
-- Add compose harness file `taskboard/docker-compose.yml`.
 - Add build exclusions in `taskboard/.dockerignore`.
 - Create Kubernetes deployment manifest in `taskboard/deploy/k8s/deployment.yaml` with liveness/readiness probes and Secret references.
 - Create Kubernetes service manifest in `taskboard/deploy/k8s/service.yaml`.
