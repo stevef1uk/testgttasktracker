@@ -32,6 +32,13 @@
       "bead_path": "taskboard/internal/model/model.go",
       "hits": 1,
       "updated_at": "2026-11-24T18:03:37Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-zmd",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-24T18:24:00Z"
     }
   ]
 }
