@@ -80,3 +80,14 @@ Active delivery phase `phase-2-kanban` only. Later phases start automatically af
 ## Future considerations
 
 - Playwright E2E coverage belongs to phase-3-browser and is not part of this plan.
+
+## Rework: api.go prerequisite for ta-oe1
+
+ta-oe1 (`taskboard/internal/web/app_test.go`) cannot close until `taskboard/internal/web/api.go` satisfies the SPEC §6 behaviors its tests assert. That file is owned by the closed phase-1-app implement bead and must be reopened through planning sync, not by this phase's beads.
+- File: taskboard/internal/web/api.go
+- Owner: closed phase-1-app implement bead (reopen via `gt rig sync-planning tasktracker`; do not create a new bead for it).
+- Required fix 1: createTask validates any supplied status but always stores `todo` (SPEC §6: status is always `todo` at creation).
+- Required fix 2: patchTask rejects an empty patch object and explicit null patched fields with 400 (SPEC §6).
+- Required fix 3: listTasks calls GetProject before ListTasks and returns 404 on ErrNotFound (SPEC §6: 404 missing project).
+- Verify after fix: `cd taskboard && go test ./internal/web/...` must pass the three failing tests before ta-oe1 is re-verified.
+- Depends on: taskboard/internal/web/api.go is a prerequisite of ta-oe1 and of ta-s7n's route checks.
