@@ -3,14 +3,6 @@
   "entries": [
     {
       "stack": "go",
-      "rule": "Avoid in model.go: internal/model/model_test.go:18:41: undefined: MaxProjectNameLen",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/model/model.go",
-      "hits": 1,
-      "updated_at": "2026-11-24T17:46:49Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in config.go: internal/config/config_test.go:12:14: undefined: LoadConfig",
       "source": "verify_fix",
       "bead_path": "taskboard/internal/config/config.go",
@@ -62,6 +54,14 @@
       "source": "qa_rework",
       "hits": 2,
       "updated_at": "2026-11-24T18:32:50Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in main.go: cmd/taskboard/main_test.go:10:12: undefined: openStore",
+      "source": "verify_fix",
+      "bead_path": "taskboard/cmd/taskboard/main.go",
+      "hits": 1,
+      "updated_at": "2026-11-24T18:44:35Z"
     }
   ]
 }
