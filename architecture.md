@@ -77,46 +77,50 @@ PostgreSQL runtime launch command from SPEC:
 
 ## HTTP + entrypoint integration
 
-### HTTP API Routes Table
+### Standardized HTTP API Table
 
-| Method | Endpoint | Description | Scope |
-| --- | --- | --- | --- |
-| GET | `/api/health` | Lightweight liveness healthcheck | Public |
-| GET | `/api/ready` | Readiness check pinging storage layer | Public |
-| GET | `/api/projects` | List projects ordered by ID | Public |
-| POST | `/api/projects` | Create a new project | Public |
-| DELETE | `/api/projects/{project_id}` | Delete project and cascade tasks | Public |
-| GET | `/api/projects/{project_id}/tasks` | List tasks in project with status/priority filters | Public |
-| POST | `/api/projects/{project_id}/tasks` | Create task in project | Public |
-| PATCH | `/api/tasks/{task_id}` | Update task title, description, priority, status | Public |
-| DELETE | `/api/tasks/{task_id}` | Delete task by ID | Public |
+| HTTP Method | Route / Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Liveness check (returns JSON `{"status":"ok"}`) |
+| `GET` | `/api/ready` | Readiness check (verifies database ping/connection) |
+| `GET` | `/api/projects` | List all projects |
+| `POST` | `/api/projects` | Create a new project (JSON body: `{"name":"..."}`) |
+| `GET` | `/api/projects/{project_id}` | Get project details by ID |
+| `DELETE` | `/api/projects/{project_id}` | Delete project and all associated tasks |
+| `GET` | `/api/projects/{project_id}/tasks` | List tasks for a project (optional query params: `status`, `priority`) |
+| `POST` | `/api/projects/{project_id}/tasks` | Create task under project (JSON: `{"title":"...","description":"...","priority":"..."}`) |
+| `PATCH` | `/api/tasks/{task_id}` | Update task title, description, status, or priority |
+| `DELETE` | `/api/tasks/{task_id}` | Delete a task |
+| `GET` | `/` | Serve index.html SPA |
+| `GET` | `/static/*` | Serve embedded static assets (`app.js`, `style.css`) |
 
 ### Server Wiring Pattern
-1. Entrypoint `taskboard/cmd/taskboard/main.go` calls config.LoadConfig().
-2. Based on TASKBOARD_DB_DRIVER, instantiates store.NewSQLiteStore or store.NewPostgresStore and runs schema setup.
-3. Instantiates web.NewApp(dbStore, assets.FS).
-4. Registers routes on standard library net/http router.
-5. Starts http.Server listening on TASKBOARD_HOST:TASKBOARD_PORT.
+1. Entrypoint `taskboard/cmd/taskboard/main.go` parses CLI flags and environment variables using `taskboard/internal/config/config.go`.
+2. Based on TASKBOARD_DB_DRIVER, instantiates SQLite or PostgreSQL store and runs schema setup.
+3. Instantiates HTTP app using `taskboard/internal/web/app.go` and `taskboard/web/assets.go`.
+4. Registers REST routes and static file handler on standard library `net/http` router.
+5. Starts HTTP server listening on configured host and port.
 6. Listens for SIGINT/SIGTERM to trigger graceful server shutdown.
 
 ## Docker & Deployment
 
 ### Application Dockerfile (`taskboard/Dockerfile`)
 1. Multi-stage build process:
-   - Builder stage: Base image golang:1.25-alpine. Compiles ./cmd/taskboard into static binary.
-   - Runtime stage: Base image alpine:3.21. Copies compiled binary, sets non-root user UID 10001.
-2. Exposed port: EXPOSE 8080.
-3. Sets environment variable TASKBOARD_HOST=0.0.0.0.
-4. Entrypoint directive: ENTRYPOINT ["/app/taskboard"].
+   - Builder stage: Base image `golang:1.24-alpine`. Compiles `taskboard/cmd/taskboard/main.go` into static binary.
+   - Runtime stage: Base image `alpine:3.20`. Copies compiled binary, sets non-root user UID 10001.
+2. Exposed port: `EXPOSE 8080`.
+3. Sets environment variable `TASKBOARD_HOST=0.0.0.0`.
+4. Entrypoint directive: `ENTRYPOINT ["/app/taskboard"]` or `CMD ["/app/taskboard"]`.
 
 ### Kubernetes Setup
-- `taskboard/deploy/k8s/deployment.yaml` defines single replica deployment referencing TASKBOARD_DB_DRIVER and TASKBOARD_DATABASE_URL from secret database-url. Liveness probe targets GET /api/health and readiness probe targets GET /api/ready.
+- `taskboard/deploy/k8s/deployment.yaml` defines single replica deployment referencing TASKBOARD_DB_DRIVER and TASKBOARD_DATABASE_URL from Secret database-url. Liveness probe targets `GET /api/health` and readiness probe targets `GET /api/ready`.
 - `taskboard/deploy/k8s/service.yaml` exposes port 8080 as ClusterIP Service.
+- `taskboard/deploy/k8s/secret.example.yaml` provides example Kubernetes secret template.
 
 ## Unit tests
 - `taskboard/internal/store/store_test.go`: SQLite table initialization, CRUD for projects and tasks, cascading deletions, Unicode length checks, and filtering.
 - `taskboard/internal/web/api_test.go`: HTTP REST endpoint behavior, status codes (200, 201, 204, 400, 404, 500, 503), error JSON responses, filtering combinations.
-- `taskboard/internal/web/app_test.go`: HTML template rendering on GET /, content types for static assets.
+- `taskboard/internal/web/app_test.go`: HTML template rendering on `GET /`, content types for static assets.
 - `taskboard/internal/web/ui_content_test.go`: Specific HTML structure checks for forms, headings, and Kanban columns.
 
 ## Integration and testing
@@ -286,7 +290,7 @@ delivery_phases:
 - Implement PostgreSQL database engine with transactional advisory lock table creation in `taskboard/internal/store/postgres.go`.
 - Implement unit tests for SQLite store contract in `taskboard/internal/store/store_test.go` and optional PostgreSQL integration tests in `taskboard/internal/store/postgres_integration_test.go`.
 - Construct web server application setup and project REST API routes in `taskboard/internal/web/app.go` and `taskboard/internal/web/api.go`.
-- Implement embed directive in `taskboard/web/assets.go` embedding templates/*.
+- Implement embed directive in `taskboard/web/assets.go` embedding `taskboard/web/templates/*`.
 - Provide HTML layout structure in `taskboard/web/templates/index.html`.
 - Create main application entrypoint in `taskboard/cmd/taskboard/main.go` with signal handling for graceful shutdown.
 - Add API project integration tests in `taskboard/internal/web/api_test.go`.
@@ -294,7 +298,7 @@ delivery_phases:
 ### phase-2-kanban
 - Implement client-side vanilla JavaScript in `taskboard/web/static/app.js` handling project creation/selection, task CRUD, status transitions (todo -> doing -> done), and filters.
 - Implement CSS stylesheet in `taskboard/web/static/style.css` for Kanban columns and cards.
-- Extend `taskboard/web/assets.go` to embed static/* assets.
+- Extend `taskboard/web/assets.go` to embed `taskboard/web/static/*` assets.
 - Add Go web router integration tests in `taskboard/internal/web/app_test.go` and UI template assertions in `taskboard/internal/web/ui_content_test.go`.
 
 ### phase-3-browser
