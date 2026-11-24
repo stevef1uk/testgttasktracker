@@ -1,106 +1,163 @@
-# Implementation plan — phase-1-app (rework)
-
-Scope: PostgreSQL store and runnable project API. Only the nine `required_files` below are in scope for this phase. Paths under `taskboard/` are exact. Bead IDs come from `bd list --limit=0 ` in this session.
-
-## Bead map
-
-### ta-11e: taskboard/internal/store/postgres.go
-- Scope: PostgreSQL implementation of the Store interface in store.go using database/sql with the pgx/v5 stdlib driver.
-- Architecture: taskboard/internal/store/postgres.go owns NewPostgresStore; schema setup runs under a transactional advisory lock.
-- Interfaces: NewPostgresStore(dsn string) (Store, error) (from architecture).
-- Depends on: taskboard/internal/store/store.go (Store interface, ErrNotFound, DDL constants).
-- Consumed by: taskboard/cmd/taskboard/main.go, taskboard/internal/store/postgres_integration_test.go.
-- Acceptance: all Store methods return ErrNotFound for missing rows; ListProjects and ListTasks return non-nil slices; no SQLite PRAGMA syntax.
-- Verify: cd taskboard && go test ./internal/store/...
-
-### ta-5qb: taskboard/internal/store/postgres_integration_test.go
-- Scope: integration tests for the PostgreSQL store, skipped unless TASKBOARD_DATABASE_URL is set.
-- Architecture: standard testing package only.
-- Depends on: taskboard/internal/store/postgres.go.
-- Acceptance: schema setup is idempotent under concurrent start; project and task CRUD round-trip; cascade delete of tasks when a project is deleted.
-- Verify: cd taskboard && go test ./internal/store/...
-
-### ta-nw9: taskboard/internal/store/store_test.go
-- Scope: shared Store contract tests run against the SQLite store.
-- Depends on: taskboard/internal/store/sqlite.go, taskboard/internal/store/store.go.
-- Acceptance: TestStoreContractMissingRowsReturnErrNotFound covers GetProject, GetTask, UpdateTask, DeleteProject, DeleteTask; TestStoreContractListReturnsNonNilSlices covers empty projects and empty task lists.
-- Verify: cd taskboard && go test ./internal/store/...
-
-### ta-83w: taskboard/internal/web/api.go
-- Scope: REST handlers for the SPEC API routes listed in the Integration contract below.
-- Interfaces: route handler methods on *App; JSON via writeJSON defined in app.go.
-- Depends on: taskboard/internal/web/app.go, taskboard/internal/store/store.go.
-- Consumed by: taskboard/internal/web/api_test.go, taskboard/cmd/taskboard/main.go.
-- Acceptance: POST /api/projects and task create apply default status todo and priority medium; PATCH accepts a subset of fields and rejects null or empty title; list filters on status and priority; unknown IDs return 404; storage failures return a generic 500 without leaking driver text.
-- Verify: cd taskboard && go test ./internal/web/...
-
-### ta-8l7: taskboard/internal/web/api_test.go
-- Scope: httptest coverage of the task REST surface through the App router. Rework is required because the review found gaps.
-- Architecture: REST routes table in architecture.md.
-- Depends on: taskboard/internal/web/api.go, taskboard/internal/web/app.go, taskboard/internal/store/store.go.
-- Acceptance (from review list):
-  - create task defaults: status todo, priority medium.
-  - PATCH subset updates; PATCH with null or empty title is rejected.
-  - list filters by status and priority; ordering is ascending id.
-  - 404 for unknown project or task IDs.
-  - title length limit 120 and description limit 1000 (Unicode characters) enforced.
-  - generic 500 when the store returns a storage error.
-- Note: taskboard/internal/web/app_test.go already contains project and task REST coverage per the review; re-verify it against this list rather than duplicating it here.
-- Verify: cd taskboard && go test -count=1 ./internal/web/...
-
-### ta-12r: taskboard/internal/web/app.go
-- Scope: App struct, NewApp(s store.Store), Handler, the page route for the index template, the static asset file server, and the writeJSON helper.
-- Interfaces: NewApp(s store.Store) *App; (*App).Handler() http.Handler.
-- Depends on: taskboard/web/assets.go, taskboard/internal/store/store.go.
-- Consumed by: taskboard/internal/web/api.go, taskboard/cmd/taskboard/main.go.
-- Acceptance: the index page is served from the embedded template; static assets such as /static/app.js are served from the embed FS; unknown methods are rejected by ServeMux method patterns.
-- Verify: cd taskboard && go test ./internal/web/...
-
-### ta-qfs: taskboard/web/assets.go
-- Scope: embed FS for templates and static assets.
-- Interfaces: var FS embed.FS with //go:embed templates/* static/*.
-- Depends on: taskboard/web/templates/index.html.
-- Consumed by: taskboard/internal/web/app.go.
-- Acceptance: the embed directive lists only templates/ and static/; no static file is duplicated elsewhere.
-- Verify: cd taskboard && go build ./...
-
-### ta-dw6: taskboard/web/templates/index.html
-- Scope: single-page layout with project panel, task panel, task form, and status and priority filter selects.
-- Architecture: server-rendered HTML with no client-side templating.
-- Acceptance: form controls use ids task-form, task-title, task-status, task-priority, filter-status, filter-priority; status options todo, doing, done; priority options low, medium, high; filter selects include an "all" option with an empty value.
-- Verify: cd taskboard && go test ./internal/web/...
-
-### ta-5kn: taskboard/cmd/taskboard/main.go
-- Scope: entrypoint that loads config, opens the store by TASKBOARD_DB_DRIVER, builds the app, and serves with graceful SIGTERM shutdown.
-- Depends on: taskboard/internal/store/postgres.go, taskboard/internal/store/store.go, taskboard/internal/web/app.go.
-- Acceptance: the process starts with the SQLite driver by default; SIGTERM triggers http.Server.Shutdown.
-- Verify: cd taskboard && go build ./cmd/taskboard
-
-## Future considerations
-- taskboard/web/static/app.js and taskboard/web/static/style.css belong to phase-2-kanban. The go:embed pattern static/* in taskboard/web/assets.go needs matching files at compile time; if phase-1-app builds fail on that pattern, report architecture_failure rather than adding those files here.
-- taskboard/internal/web/ui_content_test.go and the ta-s7n exact option-set assertions are outside phase-1-app required_files and belong to the later phase that owns them.
+# Implementation plan
 
 ## Integration contract
 
-Wiring order: config.LoadConfig() → store.NewSQLiteStore or store.NewPostgresStore by TASKBOARD_DB_DRIVER → web.NewApp(dbStore) → http.Server with graceful SIGTERM shutdown. Dependency packages are planned before the entrypoint (ta-11e, ta-nw9, ta-83w, ta-12r, then ta-5kn).
+**Entrypoint:** `taskboard/cmd/taskboard/main.go`
 
-SPEC HTTP API routes, registered by web.NewApp through the method-aware ServeMux (owner ta-83w, taskboard/internal/web/api.go):
+**Startup / dependency order (SPEC + architecture):**
 
-- `GET /api/health`
-- `GET /api/ready`
-- `GET /api/projects`
-- `POST /api/projects`
-- `DELETE /api/projects/{project_id}`
-- `GET /api/projects/{project_id}/tasks`
-- `POST /api/projects/{project_id}/tasks`
-- `PATCH /api/tasks/{task_id}`
-- `DELETE /api/tasks/{task_id}`
+- Fresh schema is empty; repeated initialization is idempotent.
+- Create/list projects with ascending IDs.
+- Create tasks with default status and priority and valid UTC timestamps.
+- Filter by status, priority, and both together.
+- Patch all mutable fields and preserve omitted fields.
+- Delete project and verify cascading task deletion.
+- Confirm foreign-key enforcement and persistence across close/reopen.
+- Verify Unicode code-point boundaries and safe SQL parameterization.
 
-Page and asset routes (owner ta-12r, taskboard/internal/web/app.go): the index page at `GET /`, and static assets under `/static/` such as `/static/app.js`, served from the embed FS in taskboard/web/assets.go (ta-qfs).
+**HTTP routes (SPEC verbatim):**
 
-Exported symbols per file:
-- taskboard/internal/store/postgres.go (ta-11e): NewPostgresStore.
-- taskboard/internal/web/app.go (ta-12r): App, NewApp, Handler, writeJSON.
-- taskboard/internal/web/api.go (ta-83w): route handler methods on *App.
-- taskboard/web/assets.go (ta-qfs): FS.
-- taskboard/cmd/taskboard/main.go (ta-5kn): main.
+| Method | Path |
+|--------|------|
+| GET | `/api/health` |
+| GET | `/api/ready` |
+| GET | `/api/projects` |
+| POST | `/api/projects` |
+| DELETE | `/api/projects/{project_id}` |
+| GET | `/api/projects/{project_id}/tasks` |
+| POST | `/api/projects/{project_id}/tasks` |
+| PATCH | `/api/tasks/{task_id}` |
+| DELETE | `/api/tasks/{task_id}` |
+
+**Per-file exports (from architecture.md):**
+
+- taskboard/internal/config/config.go
+- taskboard/internal/model/model.go
+- taskboard/internal/store/store.go
+- taskboard/internal/store/sqlite.go
+- taskboard/internal/store/postgres.go
+- taskboard/web/assets.go
+- taskboard/internal/web/app.go
+- taskboard/internal/web/api.go
+- taskboard/cmd/taskboard/main.go
+- taskboard/web/templates/index.html
+- taskboard/web/static/app.js
+- taskboard/web/static/style.css
+- taskboard/deploy/k8s/deployment.yaml
+- taskboard/deploy/k8s/service.yaml
+- taskboard/deploy/k8s/secret.example.yaml
+- taskboard/playwright.config.ts
+- taskboard/playwright/taskboard.spec.ts
+
+## Bead map
+
+_Generated by gastown planning sync (open bead IDs from `bd list`). Expand acceptance bullets if QA requires more detail._
+
+### ta-11e: taskboard/internal/store/postgres.go
+- Scope: Implement `taskboard/internal/store/postgres.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
+- Acceptance:
+  - File exists at `taskboard/internal/store/postgres.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-11e` is closed only after verification passes.
+
+### ta-5qb: taskboard/internal/store/postgres_integration_test.go
+- Scope: Implement `taskboard/internal/store/postgres_integration_test.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
+- Acceptance:
+  - Unit tests assert **functional requirements** from SPEC.md and this plan section (happy path, errors, edge cases named in architecture).
+  - No trivial always-pass tests (`assert True`, empty `TestX` bodies, or tests that only import the module).
+  - Test names and cases map to SPEC/plan acceptance bullets (reference FR IDs or behavior in comments when helpful).
+  - File exists at `taskboard/internal/store/postgres_integration_test.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-5qb` is closed only after verification passes.
+
+### ta-nw9: taskboard/internal/store/store_test.go
+- Scope: Implement `taskboard/internal/store/store_test.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/store/...`
+- Acceptance:
+  - Unit tests assert **functional requirements** from SPEC.md and this plan section (happy path, errors, edge cases named in architecture).
+  - No trivial always-pass tests (`assert True`, empty `TestX` bodies, or tests that only import the module).
+  - Test names and cases map to SPEC/plan acceptance bullets (reference FR IDs or behavior in comments when helpful).
+  - File exists at `taskboard/internal/store/store_test.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-nw9` is closed only after verification passes.
+
+### ta-83w: taskboard/internal/web/api.go
+- Scope: Implement `taskboard/internal/web/api.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go build ./internal/web/...`
+- Acceptance:
+  - File exists at `taskboard/internal/web/api.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Package has unit tests in `taskboard/internal/web/api_test.go` (same bead or dedicated test bead) covering SPEC behavior before close.
+  - `go test` for this package must pass (Verify runs `go test -count=1 ./<pkg>/...`).
+  - Bead `ta-83w` is closed only after verification passes.
+
+### ta-8l7: taskboard/internal/web/api_test.go
+- Scope: Implement `taskboard/internal/web/api_test.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/web/...`
+- Acceptance:
+  - Unit tests assert **functional requirements** from SPEC.md and this plan section (happy path, errors, edge cases named in architecture).
+  - No trivial always-pass tests (`assert True`, empty `TestX` bodies, or tests that only import the module).
+  - Test names and cases map to SPEC/plan acceptance bullets (reference FR IDs or behavior in comments when helpful).
+  - File exists at `taskboard/internal/web/api_test.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-8l7` is closed only after verification passes.
+
+### ta-12r: taskboard/internal/web/app.go
+- Scope: Implement `taskboard/internal/web/app.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go build ./internal/web/...`
+- Acceptance:
+  - File exists at `taskboard/internal/web/app.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-12r` is closed only after verification passes.
+
+### ta-qfs: taskboard/web/assets.go
+- Scope: Implement `taskboard/web/assets.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./web/...`
+- Acceptance:
+  - File exists at `taskboard/web/assets.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-qfs` is closed only after verification passes.
+
+### ta-dw6: taskboard/web/templates/index.html
+- Scope: Implement `taskboard/web/templates/index.html` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go test ./...`
+- Acceptance:
+  - File exists at `taskboard/web/templates/index.html` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Application UI files must expose real interactive controls and client-side behavior (buttons/inputs/forms plus event handlers, fetch, or React state); a static content-only screen is not acceptance.
+  - QA must verify the rendered screen can perform at least one user action from this bead's acceptance criteria before reporting all_passed.
+  - Bead `ta-dw6` is closed only after verification passes.
+
+### ta-5kn: taskboard/cmd/taskboard/main.go
+- Scope: Implement `taskboard/cmd/taskboard/main.go` per `architecture.md` and SPEC.md.
+- Architecture: see architecture.md (paths and data model for this file).
+- Verify: `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./cmd/taskboard/...`
+- Acceptance:
+  - File exists at `taskboard/cmd/taskboard/main.go` under the rig worktree.
+  - Matches layout and naming in architecture.md (no stub/placeholder implementation).
+  - Polecat runs **Verify** from the Next bead line before `bd close`.
+  - Bead `ta-5kn` is closed only after verification passes.
+
+## Phase context
+
+Active delivery phase `phase-1-app` only. Later phases start automatically after QA `all_passed` (or use `gt rig set-phase` to switch manually).
+
+- Phase verification: `cd taskboard && go test ./...`
