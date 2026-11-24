@@ -79,7 +79,7 @@ Assertions:
 Requirement: Project REST API: GET api/health, GET api/ready, GET and POST api/projects, DELETE api/projects/{project_id} with SPEC section 6 status codes and JSON shapes.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: ta-dyt
+Bead ID: ta-3d9
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
