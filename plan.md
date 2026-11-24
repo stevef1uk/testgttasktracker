@@ -1,120 +1,106 @@
-# Implementation plan: phase-1-app (PostgreSQL store and runnable project API)
+# Implementation plan — phase-1-app (rework)
 
-Active phase: `phase-1-app`. Depends on `phase-1-core` (go.mod, go.sum, README.md, .gitignore, config, model, store.go, sqlite.go already delivered).
-Phase verification: `cd taskboard && go test ./...`
-
-## Integration contract
-
-SPEC HTTP routes (SPEC §6, architecture HTTP table). All routes are listed here so the contract matches the SPEC route table exactly:
-
-| Method | Path | Phase that implements the handler |
-|---|---|---|
-| GET | `/api/health` | phase-1-app (`taskboard/internal/web/api.go`) |
-| GET | `/api/ready` | phase-1-app (`taskboard/internal/web/api.go`) |
-| GET | `/api/projects` | phase-1-app (`taskboard/internal/web/api.go`) |
-| POST | `/api/projects` | phase-1-app (`taskboard/internal/web/api.go`) |
-| DELETE | `/api/projects/{project_id}` | phase-1-app (`taskboard/internal/web/api.go`) |
-| GET | `/api/projects/{project_id}/tasks` | phase-2-kanban (`taskboard/internal/web/api.go` extended) |
-| POST | `/api/projects/{project_id}/tasks` | phase-2-kanban (`taskboard/internal/web/api.go` extended) |
-| PATCH | `/api/tasks/{task_id}` | phase-2-kanban (`taskboard/internal/web/api.go` extended) |
-| DELETE | `/api/tasks/{task_id}` | phase-2-kanban (`taskboard/internal/web/api.go` extended) |
-
-Also served in this phase: `GET /` (embedded `taskboard/web/templates/index.html`).
-
-Wiring:
-- Entrypoint `taskboard/cmd/taskboard/main.go` calls `config.LoadConfig()`, selects `store.NewSQLiteStore` or `store.NewPostgresStore` by `TASKBOARD_DB_DRIVER`, then calls `web.NewApp(dbStore, embedFS)` and serves `App.Handler()` on `TASKBOARD_HOST:TASKBOARD_PORT`.
-- Dependency order: `taskboard/internal/store/store.go` -> `taskboard/internal/store/postgres.go` -> `taskboard/internal/web/app.go` -> `taskboard/internal/web/api.go` -> `taskboard/cmd/taskboard/main.go`. `taskboard/web/assets.go` precedes `taskboard/internal/web/app.go`.
-- Exported symbols per file: `store.NewPostgresStore` (postgres.go); `web.App`, `web.NewApp`, `(*App).Handler` (app.go); `FS` (taskboard/web/assets.go); `main` (taskboard/cmd/taskboard/main.go).
+Scope: PostgreSQL store and runnable project API. Only the nine `required_files` below are in scope for this phase. Paths under `taskboard/` are exact. Bead IDs come from `bd list --limit=0 ` in this session.
 
 ## Bead map
 
 ### ta-11e: taskboard/internal/store/postgres.go
-- Scope: PostgreSQL implementation of the Store interface using `pgx/v5/stdlib` and `database/sql`.
-- Architecture: `taskboard/internal/store/postgres.go` implements PostgreSQL storage with transactional advisory locks for schema setup.
-- Interfaces: `NewPostgresStore`; implements every method of `store.Store`.
-- Depends on: `taskboard/internal/store/store.go`.
-- Consumed by: `taskboard/internal/store/postgres_integration_test.go`, `taskboard/cmd/taskboard/main.go`.
-- Acceptance: schema creation runs in a transaction holding a PostgreSQL advisory lock; repeated and concurrent starts are idempotent; identity primary keys; `$1` placeholders only; no user input interpolated into SQL; `ON DELETE CASCADE` on `tasks.project_id`; index on `tasks.project_id`; UTC RFC3339 timestamps; ascending-ID ordering.
-- Verify: `cd taskboard && go test ./internal/store/...`
-
-### ta-nw9: taskboard/internal/store/store_test.go
-- Scope: shared store contract tests against the SQLite store using `t.TempDir()`.
-- Architecture: `taskboard/internal/store/store_test.go` covers SQLite schema init, CRUD, cascade deletion, Unicode length checks, and filtering.
-- Interfaces: test-only; uses `store.NewSQLiteStore`.
-- Depends on: `taskboard/internal/store/sqlite.go`.
-- Consumed by: none.
-- Acceptance: fresh schema empty and repeated init idempotent; projects list in ascending ID; tasks default to status `todo` and priority `medium`; filters by status, priority, and both combined; patch preserves omitted fields; project delete cascades to tasks; FK enforcement and persistence across close/reopen; Unicode code-point boundaries (80/120/1000); parameterized SQL.
-- Verify: `cd taskboard && go test ./internal/store/...`
+- Scope: PostgreSQL implementation of the Store interface in store.go using database/sql with the pgx/v5 stdlib driver.
+- Architecture: taskboard/internal/store/postgres.go owns NewPostgresStore; schema setup runs under a transactional advisory lock.
+- Interfaces: NewPostgresStore(dsn string) (Store, error) (from architecture).
+- Depends on: taskboard/internal/store/store.go (Store interface, ErrNotFound, DDL constants).
+- Consumed by: taskboard/cmd/taskboard/main.go, taskboard/internal/store/postgres_integration_test.go.
+- Acceptance: all Store methods return ErrNotFound for missing rows; ListProjects and ListTasks return non-nil slices; no SQLite PRAGMA syntax.
+- Verify: cd taskboard && go test ./internal/store/...
 
 ### ta-5qb: taskboard/internal/store/postgres_integration_test.go
-- Scope: PostgreSQL contract tests, run only when `TASKBOARD_TEST_POSTGRES_URL` is set.
-- Architecture: `taskboard/internal/store/postgres_integration_test.go` exercises the store against a disposable PostgreSQL database.
-- Interfaces: test-only; uses `store.NewPostgresStore`.
-- Depends on: `taskboard/internal/store/postgres.go`.
-- Consumed by: none.
-- Acceptance: isolated schema or uniquely named objects; cleans up only its own rows; covers cascade deletion, ordering, filters, timestamp encoding, schema idempotency; never touches a production database; skips cleanly when the env var is empty.
-- Verify: `cd taskboard && go test ./internal/store/...` (with and without the env var set)
+- Scope: integration tests for the PostgreSQL store, skipped unless TASKBOARD_DATABASE_URL is set.
+- Architecture: standard testing package only.
+- Depends on: taskboard/internal/store/postgres.go.
+- Acceptance: schema setup is idempotent under concurrent start; project and task CRUD round-trip; cascade delete of tasks when a project is deleted.
+- Verify: cd taskboard && go test ./internal/store/...
+
+### ta-nw9: taskboard/internal/store/store_test.go
+- Scope: shared Store contract tests run against the SQLite store.
+- Depends on: taskboard/internal/store/sqlite.go, taskboard/internal/store/store.go.
+- Acceptance: TestStoreContractMissingRowsReturnErrNotFound covers GetProject, GetTask, UpdateTask, DeleteProject, DeleteTask; TestStoreContractListReturnsNonNilSlices covers empty projects and empty task lists.
+- Verify: cd taskboard && go test ./internal/store/...
 
 ### ta-83w: taskboard/internal/web/api.go
-- Scope: project REST handlers and health/ready in this phase; task handlers arrive in phase-2-kanban.
-- Architecture: `taskboard/internal/web/api.go` defines route handler methods on `App`.
-- Interfaces: methods on `*App` for `GET /api/health`, `GET /api/ready`, `GET /api/projects`, `POST /api/projects`, `DELETE /api/projects/{project_id}`; JSON error helper emitting `{"error":"..."}`.
-- Depends on: `taskboard/internal/web/app.go`, `taskboard/internal/store/store.go`.
-- Consumed by: `taskboard/internal/web/api_test.go`, `taskboard/cmd/taskboard/main.go` (via `NewApp`).
-- Acceptance: health returns `{"status":"ok"}` 200 regardless of DB; ready returns `{"status":"ready"}` 200 or 503 `{"error":"database unavailable"}`, with no SQL or credential leakage; project create returns 201 and rejects blank or overlong names with 400; list is ascending ID and `[]` when empty; delete returns 204 with empty body or 404 when missing; non-client DB errors return 500 with a generic message.
-- Verify: `cd taskboard && go test ./internal/web/...`
-
-### ta-12r: taskboard/internal/web/app.go
-- Scope: App struct, constructor, ServeMux wiring, and index page handler.
-- Architecture: `taskboard/internal/web/app.go` builds the HTTP router; no mutable global database handle.
-- Interfaces: `type App struct`, `func NewApp(s store.Store, assets fs.FS) *App`, `func (a *App) Handler() http.Handler`.
-- Depends on: `taskboard/internal/store/store.go`, `taskboard/web/assets.go`.
-- Consumed by: `taskboard/internal/web/api.go`, `taskboard/internal/web/api_test.go`, `taskboard/cmd/taskboard/main.go`.
-- Acceptance: uses `net/http` ServeMux with method-aware patterns; `GET /` serves embedded `templates/index.html` as `text/html`; no SQL statements in this file.
-- Verify: `cd taskboard && go test ./internal/web/...`
-
-### ta-qfs: taskboard/web/assets.go
-- Scope: embed directive for templates only in this phase; static assets are added in phase-2-kanban.
-- Architecture: `taskboard/web/assets.go` exports `FS` and embeds HTML templates.
-- Interfaces: `var FS embed.FS` with `//go:embed templates/*`.
-- Depends on: `taskboard/web/templates/index.html`.
-- Consumed by: `taskboard/internal/web/app.go`.
-- Acceptance: `FS` contains `templates/index.html`; no business logic.
-- Verify: `cd taskboard && go build ./...`
-
-### ta-dw6: taskboard/web/templates/index.html
-- Scope: real server-rendered HTML shell with `TaskBoard` heading and project controls.
-- Architecture: `taskboard/web/templates/index.html` is the HTML layout template with no client-side JavaScript.
-- Interfaces: none exported; embedded by `taskboard/web/assets.go`.
-- Depends on: none.
-- Consumed by: `taskboard/web/assets.go`, `taskboard/internal/web/app.go`.
-- Acceptance: contains `TaskBoard` heading, project name input, and `Add project` button; no inline script; valid HTML5 document.
-- Verify: `cd taskboard && go test ./internal/web/...`
-
-### ta-5kn: taskboard/cmd/taskboard/main.go
-- Scope: process entrypoint with config loading, store selection, HTTP server, graceful shutdown.
-- Architecture: `taskboard/cmd/taskboard/main.go` handles startup, configuration, database init, and SIGINT/SIGTERM shutdown.
-- Interfaces: `func main()`.
-- Depends on: `taskboard/internal/web/app.go`, `taskboard/internal/store/postgres.go`, `taskboard/internal/store/sqlite.go`, `taskboard/internal/config/config.go`.
-- Consumed by: none (process entrypoint).
-- Acceptance: invalid config exits nonzero with a useful message and no URL or password in output; listens on `127.0.0.1:8080` by default; honors `TASKBOARD_DB_DRIVER`; shuts down gracefully on SIGTERM with a timeout and closes the DB.
-- Verify: `cd taskboard && go build ./cmd/taskboard && go test ./...`
+- Scope: REST handlers for the SPEC API routes listed in the Integration contract below.
+- Interfaces: route handler methods on *App; JSON via writeJSON defined in app.go.
+- Depends on: taskboard/internal/web/app.go, taskboard/internal/store/store.go.
+- Consumed by: taskboard/internal/web/api_test.go, taskboard/cmd/taskboard/main.go.
+- Acceptance: POST /api/projects and task create apply default status todo and priority medium; PATCH accepts a subset of fields and rejects null or empty title; list filters on status and priority; unknown IDs return 404; storage failures return a generic 500 without leaking driver text.
+- Verify: cd taskboard && go test ./internal/web/...
 
 ### ta-8l7: taskboard/internal/web/api_test.go
-- Scope: httptest tests for project routes and health/ready endpoints.
-- Architecture: `taskboard/internal/web/api_test.go` covers status codes, error JSON, and project round trips.
-- Interfaces: test-only; uses `web.NewApp` with a temporary SQLite store.
-- Depends on: `taskboard/internal/web/api.go`, `taskboard/internal/web/app.go`.
-- Consumed by: none.
-- Acceptance: exact liveness and ready JSON against healthy SQLite; project create/list/delete round trip with state assertions; blank or overlong name rejected with 400 and `{"error":...}`; missing project delete returns 404; empty list is `[]`; 204 body empty; list order ascending ID; ready returns 503 when the store is closed.
-- Verify: `cd taskboard && go test ./internal/web/...`
+- Scope: httptest coverage of the task REST surface through the App router. Rework is required because the review found gaps.
+- Architecture: REST routes table in architecture.md.
+- Depends on: taskboard/internal/web/api.go, taskboard/internal/web/app.go, taskboard/internal/store/store.go.
+- Acceptance (from review list):
+  - create task defaults: status todo, priority medium.
+  - PATCH subset updates; PATCH with null or empty title is rejected.
+  - list filters by status and priority; ordering is ascending id.
+  - 404 for unknown project or task IDs.
+  - title length limit 120 and description limit 1000 (Unicode characters) enforced.
+  - generic 500 when the store returns a storage error.
+- Note: taskboard/internal/web/app_test.go already contains project and task REST coverage per the review; re-verify it against this list rather than duplicating it here.
+- Verify: cd taskboard && go test -count=1 ./internal/web/...
 
-## Verification
+### ta-12r: taskboard/internal/web/app.go
+- Scope: App struct, NewApp(s store.Store), Handler, the page route for the index template, the static asset file server, and the writeJSON helper.
+- Interfaces: NewApp(s store.Store) *App; (*App).Handler() http.Handler.
+- Depends on: taskboard/web/assets.go, taskboard/internal/store/store.go.
+- Consumed by: taskboard/internal/web/api.go, taskboard/cmd/taskboard/main.go.
+- Acceptance: the index page is served from the embedded template; static assets such as /static/app.js are served from the embed FS; unknown methods are rejected by ServeMux method patterns.
+- Verify: cd taskboard && go test ./internal/web/...
 
-- Phase gate: `cd taskboard && go test ./...` run from `tasktracker/mayor/rig`.
-- Bead coverage: exactly the nine paths above, each mapped to one bead ID from `bd list --limit=0 `.
+### ta-qfs: taskboard/web/assets.go
+- Scope: embed FS for templates and static assets.
+- Interfaces: var FS embed.FS with //go:embed templates/* static/*.
+- Depends on: taskboard/web/templates/index.html.
+- Consumed by: taskboard/internal/web/app.go.
+- Acceptance: the embed directive lists only templates/ and static/; no static file is duplicated elsewhere.
+- Verify: cd taskboard && go build ./...
+
+### ta-dw6: taskboard/web/templates/index.html
+- Scope: single-page layout with project panel, task panel, task form, and status and priority filter selects.
+- Architecture: server-rendered HTML with no client-side templating.
+- Acceptance: form controls use ids task-form, task-title, task-status, task-priority, filter-status, filter-priority; status options todo, doing, done; priority options low, medium, high; filter selects include an "all" option with an empty value.
+- Verify: cd taskboard && go test ./internal/web/...
+
+### ta-5kn: taskboard/cmd/taskboard/main.go
+- Scope: entrypoint that loads config, opens the store by TASKBOARD_DB_DRIVER, builds the app, and serves with graceful SIGTERM shutdown.
+- Depends on: taskboard/internal/store/postgres.go, taskboard/internal/store/store.go, taskboard/internal/web/app.go.
+- Acceptance: the process starts with the SQLite driver by default; SIGTERM triggers http.Server.Shutdown.
+- Verify: cd taskboard && go build ./cmd/taskboard
 
 ## Future considerations
+- taskboard/web/static/app.js and taskboard/web/static/style.css belong to phase-2-kanban. The go:embed pattern static/* in taskboard/web/assets.go needs matching files at compile time; if phase-1-app builds fail on that pattern, report architecture_failure rather than adding those files here.
+- taskboard/internal/web/ui_content_test.go and the ta-s7n exact option-set assertions are outside phase-1-app required_files and belong to the later phase that owns them.
 
-- phase-2-kanban adds `taskboard/internal/web/app_test.go`, `taskboard/internal/web/ui_content_test.go`, `taskboard/web/static/app.js`, `taskboard/web/static/style.css`, and the task routes listed in the Integration contract. Not in this phase's bead map.
-- Task REST coverage (PATCH and task CRUD assertions) belongs to phase-2-kanban.
+## Integration contract
+
+Wiring order: config.LoadConfig() → store.NewSQLiteStore or store.NewPostgresStore by TASKBOARD_DB_DRIVER → web.NewApp(dbStore) → http.Server with graceful SIGTERM shutdown. Dependency packages are planned before the entrypoint (ta-11e, ta-nw9, ta-83w, ta-12r, then ta-5kn).
+
+SPEC HTTP API routes, registered by web.NewApp through the method-aware ServeMux (owner ta-83w, taskboard/internal/web/api.go):
+
+- `GET /api/health`
+- `GET /api/ready`
+- `GET /api/projects`
+- `POST /api/projects`
+- `DELETE /api/projects/{project_id}`
+- `GET /api/projects/{project_id}/tasks`
+- `POST /api/projects/{project_id}/tasks`
+- `PATCH /api/tasks/{task_id}`
+- `DELETE /api/tasks/{task_id}`
+
+Page and asset routes (owner ta-12r, taskboard/internal/web/app.go): the index page at `GET /`, and static assets under `/static/` such as `/static/app.js`, served from the embed FS in taskboard/web/assets.go (ta-qfs).
+
+Exported symbols per file:
+- taskboard/internal/store/postgres.go (ta-11e): NewPostgresStore.
+- taskboard/internal/web/app.go (ta-12r): App, NewApp, Handler, writeJSON.
+- taskboard/internal/web/api.go (ta-83w): route handler methods on *App.
+- taskboard/web/assets.go (ta-qfs): FS.
+- taskboard/cmd/taskboard/main.go (ta-5kn): main.
