@@ -67,3 +67,24 @@ Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) a
 
 ## Future considerations
 - Playwright E2E coverage (taskboard/playwright/taskboard.spec.ts) belongs to phase-3-browser and is not planned here.
+
+## Rework amendment (planning review)
+
+Status as of this amendment:
+- ta-n4t, ta-9t7, ta-8qv, ta-1ri, ta-pk0: closed. Their files are on disk. Re-run `cd taskboard && go test ./...` before any phase-2 sign-off.
+- ta-jl3 (taskboard/internal/web/ui_content_test.go): in_progress. `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/web/...` passed in the implementation session (ok taskboard/internal/web). The bead remains open only because the polecat scope gate rejected `bd close ta-jl3` with "run green verify before bd close".
+
+Required resolution (not a planning change):
+- An operator closes ta-jl3 after confirming the green verify, or the gate's verify-detection is fixed. The planner does not create, delete, or re-scope beads to work around the gate.
+- Do not add or rename bead IDs. Only ta-jl3 is open in phase-2-kanban.
+
+Acceptance for the rework:
+- ta-jl3 is closed, or the gate defect is recorded with the exact rejected command.
+- `cd taskboard && go test ./...` exits 0 for the phase-2-kanban paths.
+- No bead is created for paths outside the four phase-2-kanban required_files.
+
+## Rework amendment (planning review)
+
+Status as of this amendment:
+- ta-n4t, ta-9t7, ta-8qv, ta-1ri, ta-pk0: closed. Their files are on disk. Re-run `cd taskboard && go test ./...` before any phase-2 sign-off.
+- ta-jl3 (taskboard/internal/web/ui_content_test.go): in_progress. `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/web/...` passed in the implementation session (ok taskboard/internal/web). The bead remains open only because the polecat scope gate rejected ` bd dolt commit -m "auto-commit after bd close"
