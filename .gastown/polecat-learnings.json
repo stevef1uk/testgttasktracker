@@ -39,6 +39,21 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-24T18:24:00Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in sqlite.go: vet: internal/store/sqlite.go:95:72: undefined: model",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/store/sqlite.go",
+      "hits": 1,
+      "updated_at": "2026-11-24T18:28:51Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: ...(truncated)",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-24T18:29:15Z"
     }
   ]
 }
