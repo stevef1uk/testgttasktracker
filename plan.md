@@ -5,13 +5,13 @@ Phase verification: `cd taskboard && go test ./...`
 
 ## Scope
 
-This phase owns exactly four first-delivery files, each with one implement bead:
+This phase owns exactly four required files, each with one implement bead:
 - ta-n4t: taskboard/web/static/app.js (closed by a prior run; re-verify on rework)
 - ta-9t7: taskboard/web/static/style.css (closed by a prior run; re-verify on rework)
 - ta-8qv: taskboard/internal/web/app_test.go (closed by a prior run; re-verify on rework)
-- ta-jl3: taskboard/internal/web/ui_content_test.go (in progress; the only open phase-2 bead)
+- ta-jl3: taskboard/internal/web/ui_content_test.go (in_progress; the only open phase-2 bead)
 
-Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) are already delivered. ta-pk0 (index.html) and ta-1ri (app.go) are closed phase-1 beads and are referenced only as dependencies. This phase extends `taskboard/web/assets.go` to embed `static/*` but creates no bead for it.
+Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) are already delivered. ta-pk0 (taskboard/web/templates/index.html) and ta-1ri (taskboard/internal/web/app.go) are closed phase-1 beads, referenced only as dependencies. taskboard/web/assets.go is extended to embed static/* but gets no bead of its own in this phase.
 
 ## Bead map
 
@@ -70,21 +70,6 @@ Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) a
 
 ## Rework amendment (planning review)
 
-Status as of this amendment:
-- ta-n4t, ta-9t7, ta-8qv, ta-1ri, ta-pk0: closed. Their files are on disk. Re-run `cd taskboard && go test ./...` before any phase-2 sign-off.
-- ta-jl3 (taskboard/internal/web/ui_content_test.go): in_progress. `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/web/...` passed in the implementation session (ok taskboard/internal/web). The bead remains open only because the polecat scope gate rejected `bd close ta-jl3` with "run green verify before bd close".
-
-Required resolution (not a planning change):
-- An operator closes ta-jl3 after confirming the green verify, or the gate's verify-detection is fixed. The planner does not create, delete, or re-scope beads to work around the gate.
-- Do not add or rename bead IDs. Only ta-jl3 is open in phase-2-kanban.
-
-Acceptance for the rework:
-- ta-jl3 is closed, or the gate defect is recorded with the exact rejected command.
-- `cd taskboard && go test ./...` exits 0 for the phase-2-kanban paths.
-- No bead is created for paths outside the four phase-2-kanban required_files.
-
-## Rework amendment (planning review)
-
-Status as of this amendment:
-- ta-n4t, ta-9t7, ta-8qv, ta-1ri, ta-pk0: closed. Their files are on disk. Re-run `cd taskboard && go test ./...` before any phase-2 sign-off.
-- ta-jl3 (taskboard/internal/web/ui_content_test.go): in_progress. `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/web/...` passed in the implementation session (ok taskboard/internal/web). The bead remains open only because the polecat scope gate rejected ` bd dolt commit -m "auto-commit after bd close"
+Status:
+- ta-n4t, ta-9t7, ta-8qv, ta-1ri, ta-pk0: closed. Their files are on disk. Re-run `cd taskboard && go test ./...` before phase-2 sign-off.
+- ta-jl3 (taskboard/internal/web/ui_content_test.go): in_progress. `cd taskboard && go mod tidy && go test -timeout 30s -count=1 ./internal/web/...` returned ok in the implementation session. The bead stays open because the polecat scope gate rejected ` bd dolt commit -m "auto-commit after bd close"
