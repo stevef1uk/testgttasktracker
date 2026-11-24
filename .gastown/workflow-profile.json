@@ -190,7 +190,7 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-1-core",
+    "active_phase_id": "phase-1-app",
     "spec_summary": "",
     "min_architecture_bytes": 3200,
     "min_plan_bytes": 800,
@@ -202,6 +202,5 @@
     "python_venv_dir": "",
     "dev_server_port": 8080
   },
-  "test_plan_reviewed": true,
-  "test_plan_frozen": true
+  "test_plan_reviewed": false
 }
