@@ -6,7 +6,7 @@
 Requirement: Config reads TASKBOARD_DB_DRIVER, TASKBOARD_DB_PATH, TASKBOARD_DATABASE_URL, TASKBOARD_HOST, TASKBOARD_PORT with SPEC section 4 defaults; invalid values fail startup without leaking the URL.
 Level: unit
 Test file: taskboard/internal/config/config_test.go
-Bead ID: ta-93p
+Bead ID:
 Phase: phase-1-core
 Scenarios:
 - No env set yields sqlite, taskboard.db, 127.0.0.1, 8080, empty URL.
@@ -20,7 +20,7 @@ Assertions:
 Requirement: Domain validation: project name trimmed to 1-80 code points; task title trimmed to 1-120; description verbatim up to 1000; status and priority enums exact.
 Level: unit
 Test file: taskboard/internal/model/model_test.go
-Bead ID: ta-i6d
+Bead ID:
 Phase: phase-1-core
 Scenarios:
 - Boundaries at 0, 1, 80, 81, 120, 121, 1000, 1001 runes, including multibyte runes.
@@ -33,7 +33,7 @@ Assertions:
 Requirement: SQLite store creates schema idempotently, enforces foreign keys on every pooled connection, uses a 5000 ms busy timeout, and persists across reopen.
 Level: integration
 Test file: taskboard/internal/store/sqlite_test.go
-Bead ID: ta-zmd
+Bead ID:
 Phase: phase-1-core
 Scenarios:
 - Fresh file schema is empty; second init on the same file keeps existing rows.
@@ -51,7 +51,7 @@ Assertions:
 Requirement: Shared store contract (project and task CRUD, filters, cascade, Unicode checks, parameterization) behaves identically on SQLite; PostgreSQL uses advisory-lock schema setup and the same contract when configured.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: ta-11e
+Bead ID: ta-nw9
 Phase: phase-1-app
 Scenarios:
 - Fresh schema empty; repeated init idempotent.
@@ -65,7 +65,7 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: ta-11e
+Bead ID: ta-5qb
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
@@ -98,7 +98,7 @@ Assertions:
 Requirement: Task REST API (list, create, patch, delete) with server-owned status, IDs, and timestamps, nonempty PATCH, explicit-null rejection, and AND-combined filters.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: ta-8qv
+Bead ID:
 Phase: phase-2-kanban
 Scenarios:
 - Task create defaults status todo and priority medium; client-supplied status, id, and timestamps are ignored.
@@ -118,7 +118,7 @@ Assertions:
 Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets are served and nonempty.
 Level: integration
 Test file: taskboard/internal/web/ui_content_test.go
-Bead ID: ta-jl3
+Bead ID:
 Phase: phase-2-kanban
 Scenarios:
 - Root page contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
