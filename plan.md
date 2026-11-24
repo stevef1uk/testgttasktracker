@@ -1,72 +1,62 @@
 # Implementation plan
 
-Active phase: `phase-3-browser`. Required files: 4 (taskboard/package.json, taskboard/package-lock.json, taskboard/playwright.config.ts, taskboard/playwright/taskboard.spec.ts). Later-phase files are out of scope for this plan.
+Active phase: `phase-3-browser` (Playwright integration and browser QA).
 
-## Phase blocker (from QA failure)
+Open or in-progress implement beads for this phase's `required_files`:
+- `ta-o19` → `taskboard/package.json` (closed, content validated)
+- `ta-qu7` → `taskboard/package-lock.json` (closed, content validated)
+- `ta-ev8` → `taskboard/playwright.config.ts` (in progress)
+- `ta-m0z` → `taskboard/playwright/taskboard.spec.ts` (open)
 
-Phase verify (`cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`) is red in `taskboard/internal/web`. These failures belong to completed-phase Task API work, not to the four active-phase files. They are repaired through the QA rewind to the owning phase (beads ta-oe1 and ta-s7n), not by these beads:
-- TestTaskCreateDefaultsAndIgnoresClientFields: POST /api/projects/{id}/tasks must ignore client `status` and default to `todo`.
-- TestTaskPatchRejectsEmptyAndNullFields: PATCH /api/tasks/{id} with an empty object, or with null title, description, status, or priority, must return 400.
-- TestTaskMissingEntitiesReturnNotFound/list_tasks_of_missing_project: GET /api/projects/{missing}/tasks must return 404.
-
-The ta-ev8 polecat must not close its bead while these remain red.
+No new beads are created in this turn. The bead set already covers every phase-3-browser required file.
 
 ## Bead map
 
 ### ta-o19: taskboard/package.json
-- Scope: JSON manifest for the Playwright E2E package under taskboard/.
-- Architecture: taskboard/package.json in Planned file layout.
-- Interfaces: scripts.test runs the Playwright chromium project; devDependency @playwright/test pinned to 1.62.1.
-- Depends on: <none>
-- Consumed by: taskboard/package-lock.json, taskboard/playwright.config.ts
-- Acceptance:
-  - Valid JSON with `name`, `scripts.test`, and `devDependencies["@playwright/test"]` present.
-  - Version pin matches the lockfile entry in ta-qu7.
-- Verify: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`
+- Scope: npm manifest declaring `@playwright/test` as a devDependency and a `test` script that runs Playwright on the chromium project.
+- Architecture: Playwright E2E suite, phase-3-browser `required_files`.
+- Interfaces: `scripts.test` runs `npx playwright test --project=chromium`; devDependency `@playwright/test` pinned to 1.62.1.
+- Depends on: `<none>`
+- Consumed by: taskboard/package-lock.json, taskboard/playwright.config.ts, taskboard/playwright/taskboard.spec.ts
+- Acceptance: manifest is valid JSON; `@playwright/test` is pinned to 1.62.1; no runtime dependencies are added.
+- Verify: read-only check that the file parses as JSON and contains the pinned devDependency.
 
 ### ta-qu7: taskboard/package-lock.json
-- Scope: lockfile resolving the dependencies declared in taskboard/package.json.
-- Architecture: taskboard/package-lock.json in Planned file layout.
-- Interfaces: none (generated lockfile).
+- Scope: lockfile matching package.json with lockfileVersion 3.
+- Architecture: phase-3-browser dependency pinning.
+- Interfaces: root entry name `playwright-tests`, version 1.0.0, devDependency `@playwright/test` 1.62.1.
 - Depends on: taskboard/package.json
-- Consumed by: dependency installation inside taskboard/.
-- Acceptance:
-  - Lockfile resolves @playwright/test 1.62.1 and its transitive dependencies.
-  - Lockfile is consistent with taskboard/package.json (no drift on reinstall).
-- Verify: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`
+- Consumed by: phase-3-browser install step performed by the operator, not by the planner.
+- Acceptance: lockfile is valid JSON; root devDependencies match taskboard/package.json exactly.
+- Verify: read-only comparison of the root devDependencies against taskboard/package.json. Do not run installs at the rig root.
 
 ### ta-ev8: taskboard/playwright.config.ts
-- Scope: Playwright runner configuration for browser E2E tests.
-- Architecture: taskboard/playwright.config.ts in Planned file layout (Playwright test runner configuration).
-- Interfaces: default export from `defineConfig`; baseURL from BASE_URL env, default http://localhost:8080; one `chromium` project using the Desktop Chrome device profile.
-- Depends on: taskboard/package.json, taskboard/package-lock.json
+- Scope: Playwright runner configuration. The cached content sets `testDir: './e2e'`, but the E2E spec lives under `taskboard/playwright/`. Set `testDir` to `./playwright` so the runner discovers `taskboard.spec.ts`.
+- Architecture: "Playwright Browser E2E Test Suite" section. The base URL defaults to `http://127.0.0.1:8080` per SPEC, overridable with `BASE_URL`.
+- Interfaces: default export from `defineConfig`; single project `chromium` using `devices['Desktop Chrome']`.
+- Depends on: taskboard/package.json
 - Consumed by: taskboard/playwright/taskboard.spec.ts
-- Acceptance:
-  - `testDir` points at the directory containing taskboard.spec.ts (`./playwright`). The cached content sets `./e2e`, which would discover zero tests for the `playwright` verify argument; fix before close.
-  - `baseURL` honors BASE_URL and defaults to http://localhost:8080.
-  - The chromium project uses the Desktop Chrome device profile.
-  - Config loads without error when Playwright lists tests with the config file.
-- Verify: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`
+- Acceptance: the config exports a `defineConfig` result; `testDir` resolves to the `playwright/` directory; the chromium project is the only project; the baseURL default is 127.0.0.1:8080.
+- Verify: read-only inspection of the file contents. The phase verify command is `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`, run by QA.
 
 ### ta-m0z: taskboard/playwright/taskboard.spec.ts
-- Scope: browser E2E scenarios for the Kanban UI and REST-backed behavior.
-- Architecture: taskboard/playwright/taskboard.spec.ts (Playwright E2E browser tests).
-- Interfaces: test file only; it must not import Go code.
+- Scope: E2E browser tests for project creation through the UI, adding a task, moving a task todo to doing to done with the "Move forward" button, priority filtering (high, medium, low), and task deletion. Each test creates uniquely named data and cleans it up.
+- Architecture: "Playwright Browser E2E Test Suite" section.
+- Interfaces: test file only. Uses element IDs from `taskboard/web/templates/index.html`: `project-name`, `project-create`, `task-title`, `task-create`, `status-filter`, `filter-priority`.
 - Depends on: taskboard/playwright.config.ts, taskboard/package.json
-- Consumed by: phase verify command.
-- Acceptance:
-  - Creating a project through the UI makes it appear in the project list.
-  - Creating a task in a project shows it in the todo column with status `todo`, regardless of any client-set status.
-  - Moving a task to another status via the UI persists after reload.
-  - Filtering by status and priority shows only matching tasks.
-  - Deleting a task removes it from the board.
-  - No trivial always-pass assertions (`expect(true)`, empty tests).
-  - Each test drives at least one real control (button, input, form) and asserts the resulting DOM state.
-- Verify: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`
+- Consumed by: phase-3-browser verify command.
+- Acceptance: each SPEC flow has at least one test; no test depends on another test's data; cleanup runs after each test.
+- Verify: QA runs the phase verify command. The planner does not run tests.
+
+## QA rework (blocks phase verify)
+
+The phase verify command is `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`. The Go failures below must be green before phase-3-browser can close:
+- `TestTaskCreateDefaultsAndIgnoresClientFields`: create must ignore a client-supplied status (taskboard/internal/web/api.go, createTask).
+- `TestTaskPatchRejectsEmptyAndNullFields`: empty or null PATCH bodies must return 400 (taskboard/internal/web/api.go, patchTask).
+- `TestTaskMissingEntitiesReturnNotFound/list_tasks_of_missing_project`: GET /api/projects/{id}/tasks for a missing project must return 404 (taskboard/internal/web/api.go, listTasks).
+- Exact-option assertions for filter-status and filter-priority (taskboard/internal/web/ui_content_test.go).
+
+These files belong to completed phases (phase-1-app and phase-2-kanban). Their owning beads are ta-oe1 and ta-s7n. The planner does not create beads for them. The QA rewind routes the fix to the owning completed phase. ta-ev8 stays open until phase verify is green.
 
 ## Future considerations
-- None for this phase.
-
-## Phase context
-
-Active delivery phase `phase-3-browser` only. Later phases start automatically after QA `all_passed`.
+- The `testDir` mismatch in the cached config (`./e2e`) is resolved by the ta-ev8 acceptance above.
