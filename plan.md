@@ -3,37 +3,31 @@
 Active delivery phase: phase-2-kanban (Tasks, Kanban UI, and full Go tests).
 Phase verification: `cd taskboard && go test ./...`
 
-## Route alignment
+## Scope
 
-API routes come from SPEC.md section 6: /api/health, /api/ready, /api/projects, /api/projects/{project_id}, /api/projects/{project_id}/tasks, /api/tasks/{task_id}.
-Browser routes come from SPEC.md section 7: GET / serves the HTML shell (taskboard/web/templates/index.html). Embedded static assets are served under /static/: /static/app.js and /static/style.css.
-
-## Embed dependency
-
-taskboard/web/assets.go owns the embed directive. Phase 2 extends it to `//go:embed templates/* static/*`. assets.go is not in this phase's required_files, so ta-n4t and ta-9t7 must confirm the directive covers static/*. ta-8qv and ta-jl3 depend on that coverage through their static-asset assertions.
+This phase owns exactly four first-delivery files. Each has one open bead from `bd list --limit=0 ` this session. Phase 1 files (config, model, store, web app/api, main, assets.go, index.html) are already delivered; this phase only extends `taskboard/web/assets.go` to embed `static/*` and does not create a bead for it.
 
 ## Bead map
 
 ### ta-n4t: taskboard/web/static/app.js
 - Scope: Vanilla JavaScript for project create, select, and delete (delete behind window.confirm); task create, edit (PATCH /api/tasks/{task_id}), move forward (todo to doing to done), and delete; status and priority filters sent as query parameters.
 - Architecture: architecture.md phase-2-kanban; SPEC.md sections 6 and 7; served at /static/app.js.
-- Interfaces: none exported (browser script). Consumes the REST routes in SPEC.md section 6 and the DOM ids in taskboard/web/templates/index.html.
-- Depends on: taskboard/web/assets.go (embed of static/*), ta-pk0 (taskboard/web/templates/index.html), ta-1ri (taskboard/internal/web/app.go).
+- Interfaces: none exported (browser script). Consumes the REST routes in SPEC.md section 6 and DOM ids in taskboard/web/templates/index.html.
+- Depends on: ta-pk0 (taskboard/web/templates/index.html), ta-1ri (taskboard/internal/web/app.go), taskboard/web/assets.go (embed of static/*).
 - Consumed by: none in this phase.
 - Acceptance:
   - User text is inserted via textContent or safe DOM APIs only; no innerHTML interpolation of user input.
   - Move forward is hidden or disabled for done tasks.
   - Filtered-out cards are not rendered; empty states shown for no projects and for no matching tasks.
   - API failures are shown in the visible error region.
-  - Real controls and event handlers exist for each action above.
 - Verify: `cd taskboard && go test ./...`
 
 ### ta-9t7: taskboard/web/static/style.css
 - Scope: Plain CSS for the three Kanban columns (To Do, Doing, Done), task cards, project selector, filter controls, error region, and empty states. No CSS framework, no build step.
 - Architecture: architecture.md phase-2-kanban; SPEC.md section 7; served at /static/style.css.
 - Interfaces: none exported; packaged as static/style.css in the embedded FS.
-- Depends on: taskboard/web/assets.go (embed of static/*), ta-pk0 (taskboard/web/templates/index.html, which references the classes).
-- Consumed by: ta-8qv (taskboard/internal/web/app_test.go) and ta-jl3 (taskboard/internal/web/ui_content_test.go), both asserting the asset is served.
+- Depends on: ta-pk0 (taskboard/web/templates/index.html, which references the classes), taskboard/web/assets.go (embed of static/*).
+- Consumed by: ta-8qv (taskboard/internal/web/app_test.go), ta-jl3 (taskboard/internal/web/ui_content_test.go).
 - Acceptance:
   - Three visible Kanban columns; layout usable at desktop and narrow widths.
   - Classes for cards, columns, error region, and empty states are referenced by taskboard/web/templates/index.html.
@@ -44,26 +38,26 @@ taskboard/web/assets.go owns the embed directive. Phase 2 extends it to `//go:em
 - Scope: httptest tests for the App router: GET / returns the HTML shell; /static/app.js and /static/style.css return 200 with nonempty bodies and correct Content-Type; a missing static file returns 404.
 - Architecture: architecture.md unit tests (app_test.go: HTML rendering on GET /, content types for static assets).
 - Interfaces: uses App and NewApp from taskboard/internal/web/app.go and the embedded FS from taskboard/web/assets.go. Defines only test functions.
-- Depends on: ta-1ri (taskboard/internal/web/app.go), taskboard/web/assets.go (embed of static/*).
+- Depends on: ta-1ri (taskboard/internal/web/app.go), ta-n4t (taskboard/web/static/app.js), ta-9t7 (taskboard/web/static/style.css).
 - Consumed by: none.
 - Acceptance:
   - Embedded FS includes static/*. If static assets return 404, the fix is the embed directive in taskboard/web/assets.go, not a change to these assertions.
   - Assertions check status, Content-Type, and nonempty body.
   - Cases are independent and do not depend on execution order.
   - No trivial always-pass tests.
-- Verify: `cd taskboard && go test -timeout 30s -count=1 ./internal/web/...`
+- Verify: `cd taskboard && go test ./...`
 
 ### ta-jl3: taskboard/internal/web/ui_content_test.go
 - Scope: Assertions on GET / markup: TaskBoard heading; project input with Add project button; task form with required title, optional description, priority select (low, medium, high), and Add task button; headings To Do, Doing, Done; status filter options (all, todo, doing, done); priority filter options (all, low, medium, high); references to the embedded JavaScript and stylesheet assets.
 - Architecture: architecture.md ui_content_test.go entry; SPEC.md section 7.
 - Interfaces: uses NewApp from taskboard/internal/web/app.go; markup from taskboard/web/templates/index.html. Defines only test functions.
-- Depends on: ta-1ri (taskboard/internal/web/app.go), ta-pk0 (taskboard/web/templates/index.html).
+- Depends on: ta-1ri (taskboard/internal/web/app.go), ta-pk0 (taskboard/web/templates/index.html), ta-n4t (taskboard/web/static/app.js), ta-9t7 (taskboard/web/static/style.css).
 - Consumed by: none.
 - Acceptance:
   - Each required element is checked by element, attribute, or text, not a loose substring match.
   - Referenced JavaScript and stylesheet assets return 200 with nonempty bodies.
   - No trivial always-pass tests.
-- Verify: `cd taskboard && go test -timeout 30s -count=1 ./internal/web/...`
+- Verify: `cd taskboard && go test ./...`
 
 ## Future considerations
 - Playwright E2E coverage (taskboard/playwright/taskboard.spec.ts) belongs to phase-3-browser and is not planned here.
