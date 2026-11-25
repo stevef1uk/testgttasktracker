@@ -6,7 +6,7 @@
 Requirement: Domain validation: project name trimmed to 1-80 code points; task title trimmed to 1-120; description verbatim up to 1000; status and priority enums exact.
 Level: unit
 Test file: taskboard/internal/model/model_test.go
-Bead ID: ta-qb9
+Bead ID: ta-4rb
 Phase: phase-1-core
 Scenarios:
 - Boundaries at 0, 1, 80, 81, 120, 121, 1000, 1001 runes, including multibyte runes.
@@ -20,7 +20,7 @@ Assertions:
 Requirement: SQLite store contract: idempotent schema creation, foreign keys enforced on every pooled connection, 5000 ms busy timeout, project and task CRUD, ascending ID order, status/priority filters combined with AND, partial PATCH, project delete cascades to tasks, persistence across close and reopen.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: ta-5rq
+Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
 Phase: phase-1-app
 Scenarios:
 - Fresh file schema is empty; second init on the same file keeps existing rows.
@@ -37,7 +37,7 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: ta-9ik
+Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
@@ -50,7 +50,7 @@ Assertions:
 Requirement: Project REST API: GET /api/health, GET /api/ready, GET and POST /api/projects, DELETE /api/projects/{project_id} with SPEC section 6 status codes and JSON shapes; GET / serves the embedded HTML shell.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: ta-62r
+Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
@@ -66,7 +66,7 @@ Assertions:
 Requirement: Task REST API (list, create, patch, delete) with server-owned status, IDs, and timestamps, nonempty PATCH, explicit-null rejection, and AND-combined filters.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: ta-88r
+Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
 Phase: phase-2-kanban
 Scenarios:
 - Task create defaults status todo and priority medium; client-supplied status, id, and timestamps are ignored.
