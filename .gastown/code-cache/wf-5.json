@@ -30,5 +30,29 @@
     "validated_at": "2026-11-25T08:44:26Z",
     "created_at": "2026-11-25T08:44:26Z",
     "design_fingerprint": "e4b8f99e523978ef56deb4ccdaad9187"
+  },
+  "3:taskboard/package-lock.json": {
+    "content": "{\n  \"name\": \"playwright-tests\",\n  \"version\": \"1.0.0\",\n  \"lockfileVersion\": 3,\n  \"requires\": true,\n  \"packages\": {\n    \"\": {\n      \"name\": \"playwright-tests\",\n      \"version\": \"1.0.0\",\n      \"description\": \"Playwright E2E tests\",\n      \"devDependencies\": {\n        \"@playwright/test\": \"1.62.1\"\n      }\n    }\n  }\n}\n",
+    "md5": "75421ef2050e7fd1eb42e07597cb69a2",
+    "validated": true,
+    "validated_at": "2026-11-25T08:47:30Z",
+    "created_at": "2026-11-25T08:47:30Z",
+    "design_fingerprint": "e4b8f99e523978ef56deb4ccdaad9187"
+  },
+  "3:taskboard/package.json": {
+    "content": "{\n  \"name\": \"playwright-tests\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Playwright E2E tests\",\n  \"scripts\": {\n    \"test\": \"npx playwright test --project=chromium\"\n  },\n  \"devDependencies\": {\n    \"@playwright/test\": \"1.62.1\"\n  }\n}\n",
+    "md5": "e30a1da4a947e9ac00e1af486b7236fb",
+    "validated": true,
+    "validated_at": "2026-11-25T08:47:30Z",
+    "created_at": "2026-11-25T08:47:30Z",
+    "design_fingerprint": "e4b8f99e523978ef56deb4ccdaad9187"
+  },
+  "3:taskboard/playwright.config.ts": {
+    "content": "import { defineConfig, devices } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: './playwright',\n  timeout: 10000,\n  fullyParallel: true,\n  forbidOnly: !!process.env.CI,\n  retries: 0,\n  workers: process.env.CI ? 1 : undefined,\n  reporter: [['html', { open: 'never' }], ['list']],\n  use: {\n    baseURL: process.env.BASE_URL || 'http://127.0.0.1:8080',\n    trace: 'on-first-retry',\n  },\n  projects: [\n    {\n      name: 'chromium',\n      use: {\n        ...devices['Desktop Chrome'],\n        launchOptions: {\n          args: [\n            '--disable-features=HttpsUpgrades,HttpsFirstModeV2,AutomaticHttpsDefault,AutomaticHttpsDefaultEnabled,HttpsOnlyMode',\n            '--ignore-certificate-errors',\n          ],\n        },\n      },\n    },\n  ],\n});",
+    "md5": "c4105dbcb203c76846a7567983e64915",
+    "validated": true,
+    "validated_at": "2026-11-25T08:47:30Z",
+    "created_at": "2026-11-25T08:47:30Z",
+    "design_fingerprint": "e4b8f99e523978ef56deb4ccdaad9187"
   }
 }
