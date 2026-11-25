@@ -194,7 +194,8 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-3-browser",
+    "active_phase_id": "phase-2-kanban",
+    "rewound_from_phase_id": "phase-3-browser",
     "completed_phase_ids": [
       "phase-2-kanban"
     ],
