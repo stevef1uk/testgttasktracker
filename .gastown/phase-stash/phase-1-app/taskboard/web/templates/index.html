@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TaskBoard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>TaskBoard</h1>
+  </header>
+  <main>
+    <section id="projects-panel">
+      <h2>Projects</h2>
+      <form id="project-form">
+        <input id="project-name" name="name" type="text" maxlength="80" required placeholder="Project name">
+        <button id="project-create" type="submit">Create project</button>
+      </form>
+      <ul id="project-list"></ul>
+    </section>
+    <section id="tasks-panel">
+      <h2>Tasks</h2>
+      <form id="task-form">
+        <input id="task-title" name="title" type="text" maxlength="120" required placeholder="Task title">
+        <textarea id="task-description" name="description" maxlength="1000" placeholder="Description"></textarea>
+        <select id="task-status" name="status">
+          <option value="todo">todo</option>
+          <option value="doing">doing</option>
+          <option value="done">done</option>
+        </select>
+        <select id="task-priority" name="priority">
+          <option value="low">low</option>
+          <option value="medium" selected>medium</option>
+          <option value="high">high</option>
+        </select>
+        <button id="task-create" type="submit">Create task</button>
+      </form>
+      <div id="status-filter">
+        <select id="filter-status">
+          <option value="">all statuses</option>
+          <option value="todo">todo</option>
+          <option value="doing">doing</option>
+          <option value="done">done</option>
+        </select>
+        <select id="filter-priority">
+          <option value="">all priorities</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
+      </div>
+      <ul id="task-list"></ul>
+    </section>
+  </main>
+  <script>
+  (function () {
+    "use strict";
+
+    var state = { projects: [], tasks: [], projectId: null };
+
+    function $(id) { return document.getElementById(id); }
+
+    function api(path, opts) {
+      var options = Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {});
+      return fetch(path, options).then(function (res) {
+        return res.text().then(function (text) {
+          var body = text ? JSON.parse(text) : null;
+          if (!res.ok) {
+            var msg = (body && body.error) ? body.error : ("HTTP " + res.status);
+            throw new Error(msg);
+          }
+          return body;
+        });
+      });
+    }
+
+    function showError(err) {
+      window.alert(err && err.message ? err.message : String(err));
+    }
+
+    function renderProjects() {
+      var list = $("project-list");
+      list.innerHTML = "";
+      state.projects.forEach(function (p) {
+        var li = document.createElement("li");
+        var pick = document.createElement("button");
+        pick.type = "button";
+        pick.className = "select-project";
+        pick.textContent = p.name;
+        pick.addEventListener("click", function () {
+          state.projectId = p.id;
+          loadTasks();
+        });
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "delete-project";
+        del.textContent = "Delete";
+        del.addEventListener("click", function () {
+          api("/api/projects/" + encodeURIComponent(p.id), { method: "DELETE" })
+            .then(function () {
+              if (state.projectId === p.id) {
+                state.projectId = null;
+                state.tasks = [];
+              }
+              return loadProjects();
+            })
+            .catch(showError);
+        });
+        li.appendChild(pick);
+        li.appendChild(del);
+        list.appendChild(li);
+      });
+    }
+
+    function renderTasks() {
+      var list = $("task-list");
+      list.innerHTML = "";
+      var fStatus = $("filter-status").value;
+      var fPriority = $("filter-priority").value;
+      state.tasks
+        .filter(function (t) {
+          return (!fStatus || t.status === fStatus) && (!fPriority || t.priority === fPriority);
+        })
+        .forEach(function (t) {
+          var li = document.createElement("li");
+          var title = document.createElement("span");
+          title.textContent = t.title + " [" + t.priority + "] ";
+          var statusSel = document.createElement("select");
+          statusSel.className = "task-status-change";
+          ["todo", "doing", "done"].forEach(function (s) {
+            var opt = document.createElement("option");
+            opt.value = s;
+            opt.textContent = s;
+            if (s === t.status) opt.selected = true;
+            statusSel.appendChild(opt);
+          });
+          statusSel.addEventListener("change", function () {
+            api("/api/tasks/" + encodeURIComponent(t.id), {
+              method: "PATCH",
+              body: JSON.stringify({ status: statusSel.value })
+            }).then(loadTasks).catch(showError);
+          });
+          var del = document.createElement("button");
+          del.type = "button";
+          del.className = "delete-task";
+          del.textContent = "Delete";
+          del.addEventListener("click", function () {
+            api("/api/tasks/" + encodeURIComponent(t.id), { method: "DELETE" })
+              .then(loadTasks)
+              .catch(showError);
+          });
+          li.appendChild(title);
+          li.appendChild(statusSel);
+          li.appendChild(del);
+          list.appendChild(li);
+        });
+    }
+
+    function loadProjects() {
+      return api("/api/projects").then(function (projects) {
+        state.projects = projects || [];
+        renderProjects();
+      });
+    }
+
+    function loadTasks() {
+      if (!state.projectId) {
+        state.tasks = [];
+        renderTasks();
+        return Promise.resolve();
+      }
+      return api("/api/projects/" + encodeURIComponent(state.projectId) + "/tasks").then(function (tasks) {
+        state.tasks = tasks || [];
+        renderTasks();
+      });
+    }
+
+    $("project-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = $("project-name").value.trim();
+      if (!name) return;
+      api("/api/projects", { method: "POST", body: JSON.stringify({ name: name }) })
+        .then(function () {
+          $("project-name").value = "";
+          return loadProjects();
+        })
+        .catch(showError);
+    });
+
+    $("task-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!state.projectId) {
+        window.alert("Select a project first");
+        return;
+      }
+      var payload = {
+        title: $("task-title").value.trim(),
+        description: $("task-description").value,
+        status: $("task-status").value,
+        priority: $("task-priority").value
+      };
+      if (!payload.title) return;
+      api("/api/projects/" + encodeURIComponent(state.projectId) + "/tasks", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+        .then(function () {
+          $("task-title").value = "";
+          $("task-description").value = "";
+          return loadTasks();
+        })
+        .catch(showError);
+    });
+
+    $("filter-status").addEventListener("change", renderTasks);
+    $("filter-priority").addEventListener("change", renderTasks);
+
+    loadProjects().catch(showError);
+  })();
+  </script>
+</body>
+</html>
