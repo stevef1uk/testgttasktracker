@@ -53,16 +53,21 @@
           "taskboard/internal/config/config.go",
           "taskboard/internal/model/model.go",
           "taskboard/internal/store/store.go",
-          "taskboard/internal/store/sqlite.go"
+          "taskboard/internal/store/sqlite.go",
+          "taskboard/internal/store/postgres.go"
         ],
         "qa_verify_command": "cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store",
-        "spec_focus": "Go foundation, configuration, models, SQLite store"
+        "spec_focus": "Go foundation, configuration, models, SQLite store",
+        "file_dependencies": {
+          "taskboard/internal/store/postgres.go": [
+            "taskboard/internal/store/store.go"
+          ]
+        }
       },
       {
         "id": "phase-1-app",
         "title": "PostgreSQL store and runnable project API",
         "required_files": [
-          "taskboard/internal/store/postgres.go",
           "taskboard/internal/store/store_test.go",
           "taskboard/internal/store/postgres_integration_test.go",
           "taskboard/cmd/taskboard/main.go",
@@ -81,14 +86,12 @@
           "taskboard/cmd/taskboard/main.go": [
             "taskboard/internal/web/app.go"
           ],
-          "taskboard/internal/store/postgres.go": [
-            "taskboard/internal/store/store.go"
-          ],
           "taskboard/internal/store/postgres_integration_test.go": [
             "taskboard/internal/store/postgres.go"
           ],
           "taskboard/internal/store/store_test.go": [
-            "taskboard/internal/store/sqlite.go"
+            "taskboard/internal/store/sqlite.go",
+            "taskboard/internal/store/postgres.go"
           ],
           "taskboard/internal/web/api.go": [
             "taskboard/internal/web/app.go"
@@ -192,9 +195,6 @@
     "explicit_delivery_contract": true,
     "active_phase_id": "phase-1-core",
     "rewound_from_phase_id": "phase-1-app",
-    "completed_phase_ids": [
-      "phase-1-core"
-    ],
     "spec_summary": "",
     "min_architecture_bytes": 3200,
     "min_plan_bytes": 800,

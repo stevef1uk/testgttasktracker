@@ -81,24 +81,24 @@ PostgreSQL runtime launch command from SPEC:
 
 | HTTP Method | Route / Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/health` | Liveness check (returns JSON `{"status":"ok"}`) |
+| `GET` | `/api/health` | Liveness check (returns JSON {"status":"ok"}) |
 | `GET` | `/api/ready` | Readiness check (verifies database ping/connection) |
 | `GET` | `/api/projects` | List all projects |
-| `POST` | `/api/projects` | Create a new project (JSON body: `{"name":"..."}`) |
+| `POST` | `/api/projects` | Create a new project (JSON body: {"name":"..."}) |
 | `DELETE` | `/api/projects/{project_id}` | Delete project and all associated tasks |
-| `GET` | `/api/projects/{project_id}/tasks` | List tasks for a project (optional query params: `status`, `priority`) |
-| `POST` | `/api/projects/{project_id}/tasks` | Create task under project (JSON: `{"title":"...","description":"...","priority":"..."}`) |
+| `GET` | `/api/projects/{project_id}/tasks` | List tasks for a project (optional query params: status, priority) |
+| `POST` | `/api/projects/{project_id}/tasks` | Create task under project (JSON: {"title":"...","description":"...","priority":"..."}) |
 | `PATCH` | `/api/tasks/{task_id}` | Update task title, description, status, or priority |
 | `DELETE` | `/api/tasks/{task_id}` | Delete a task |
-| `GET` | `/` | Serve server-rendered HTML page (`index.html` via `html/template`) |
-| `GET` | `/static/*` | Serve embedded static assets (`app.js`, `style.css`) |
+| `GET` | `/` | Serve server-rendered HTML page (index.html via html/template) |
+| `GET` | `/static/*` | Serve embedded static assets (app.js, style.css) |
 
 ### Startup / dependency order
-`config.LoadConfig` → `NewSQLiteStore` / `NewPostgresStore` (with transactional advisory lock schema init) → `web.NewApp` → route registration → `http.ListenAndServe` → graceful SIGTERM shutdown
+config.LoadConfig → NewSQLiteStore / NewPostgresStore (with transactional advisory lock schema init) → web.NewApp → route registration → http.ListenAndServe → graceful SIGTERM shutdown
 
 ### Server Wiring Pattern
 1. Entrypoint `taskboard/cmd/taskboard/main.go` parses configuration settings from environment variables using `taskboard/internal/config/config.go` via `config.LoadConfig`.
-2. Based on `TASKBOARD_DB_DRIVER` (`sqlite` or `postgres`), instantiates store (`NewSQLiteStore` or `NewPostgresStore`) and runs schema setup (without silent fallback to SQLite if PostgreSQL connection fails).
+2. Based on TASKBOARD_DB_DRIVER (`sqlite` or `postgres`), instantiates store (`NewSQLiteStore` or `NewPostgresStore`) and runs schema setup (without silent fallback to SQLite if PostgreSQL connection fails).
 3. Instantiates HTTP app `web.NewApp` using `taskboard/internal/web/app.go` and embedded assets in `taskboard/web/assets.go` (`FS`).
 4. Registers REST routes and static file handler on standard library `net/http` ServeMux router.
 5. Starts HTTP server listening on configured `TASKBOARD_HOST:TASKBOARD_PORT`.
@@ -115,14 +115,14 @@ PostgreSQL runtime launch command from SPEC:
 4. Entrypoint directive: `ENTRYPOINT ["/app/taskboard"]` or `CMD ["/app/taskboard"]`.
 
 ### Kubernetes Setup
-- `taskboard/deploy/k8s/deployment.yaml` defines single replica deployment referencing TASKBOARD_DB_DRIVER and TASKBOARD_DATABASE_URL from Secret database-url. Liveness probe targets `GET /api/health` and readiness probe targets `GET /api/ready`.
+- `taskboard/deploy/k8s/deployment.yaml` defines single replica deployment referencing TASKBOARD_DB_DRIVER and TASKBOARD_DATABASE_URL from Secret database-url. Liveness probe targets GET /api/health and readiness probe targets GET /api/ready.
 - `taskboard/deploy/k8s/service.yaml` exposes port 8080 as ClusterIP Service.
 - `taskboard/deploy/k8s/secret.example.yaml` provides example Kubernetes secret template.
 
 ## Unit tests
 - `taskboard/internal/store/store_test.go`: SQLite table initialization, CRUD for projects and tasks, cascading deletions, Unicode length checks, and filtering.
 - `taskboard/internal/web/api_test.go`: HTTP REST endpoint behavior, status codes (200, 201, 204, 400, 404, 500, 503), error JSON responses, filtering combinations.
-- `taskboard/internal/web/app_test.go`: HTML template rendering on `GET /`, content types for static assets.
+- `taskboard/internal/web/app_test.go`: HTML template rendering on GET /, content types for static assets.
 - `taskboard/internal/web/ui_content_test.go`: Specific HTML structure checks for forms, headings, and Kanban columns.
 
 ## Integration and testing
@@ -176,15 +176,17 @@ delivery_phases:
       - taskboard/internal/model/model.go
       - taskboard/internal/store/store.go
       - taskboard/internal/store/sqlite.go
+      - taskboard/internal/store/postgres.go
     qa_verify_command: 'cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store'
     depends_on: []
-    file_dependencies: {}
+    file_dependencies:
+      taskboard/internal/store/postgres.go:
+        - taskboard/internal/store/store.go
 
   - id: phase-1-app
     title: PostgreSQL store and runnable project API
     spec_focus: PostgreSQL store and runnable project API
     required_files:
-      - taskboard/internal/store/postgres.go
       - taskboard/internal/store/store_test.go
       - taskboard/internal/store/postgres_integration_test.go
       - taskboard/cmd/taskboard/main.go
@@ -197,10 +199,9 @@ delivery_phases:
     depends_on:
       - phase-1-core
     file_dependencies:
-      taskboard/internal/store/postgres.go:
-        - taskboard/internal/store/store.go
       taskboard/internal/store/store_test.go:
         - taskboard/internal/store/sqlite.go
+        - taskboard/internal/store/postgres.go
       taskboard/internal/store/postgres_integration_test.go:
         - taskboard/internal/store/postgres.go
       taskboard/cmd/taskboard/main.go:
@@ -287,9 +288,9 @@ delivery_phases:
 - Implement core domain models and unicode length validation rules in `taskboard/internal/model/model.go`.
 - Define shared Store repository interface and DDL constants in `taskboard/internal/store/store.go`.
 - Implement SQLite persistence with foreign keys PRAGMA and busy timeout in `taskboard/internal/store/sqlite.go`.
+- Implement PostgreSQL database engine in `taskboard/internal/store/postgres.go` with idempotent schema creation under transactional advisory lock (`pg_advisory_xact_lock`), `$1` placeholders, and identity primary keys.
 
 ### phase-1-app
-- Implement PostgreSQL database engine in `taskboard/internal/store/postgres.go` with idempotent schema creation under transactional advisory lock (`pg_advisory_xact_lock`), `$1` placeholders, and identity primary keys.
 - Implement unit tests for store contract in `taskboard/internal/store/store_test.go` and optional PostgreSQL integration tests in `taskboard/internal/store/postgres_integration_test.go`.
 - Construct web server setup in `taskboard/internal/web/app.go` and API handlers in `taskboard/internal/web/api.go`:
   - `GET /api/health`: 200 `{"status":"ok"}`
