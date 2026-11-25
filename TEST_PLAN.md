@@ -74,7 +74,7 @@ Scenarios:
 - Project create returns 201 with JSON; blank name returns 400 with an error object.
 - Project list returns [] when empty and ascending ID order otherwise; delete returns 204 with empty body, then 404 for missing.
 - Malformed JSON and invalid IDs return documented 400 or 404.
-- GET / returns 200 text/html containing the TaskBoard heading and the project form; Kanban column headers are asserted in phase-2-kanban (ui_content_test.go).
+- GET / returns 200 text/html containing the TaskBoard heading and the project form.
 - Storage failure returns safe 500 JSON with no SQL text; project list failure returns 500, never an empty array.
 Assertions:
 - Decoded JSON values, keys, and types match SPEC; whitespace is not asserted.
@@ -84,7 +84,7 @@ Assertions:
 Requirement: Task REST API (list, create, patch, delete) with server-owned status, IDs, and timestamps, nonempty PATCH, explicit-null rejection, and AND-combined filters.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
+Bead ID: ta-88r
 Phase: phase-2-kanban
 Scenarios:
 - Task create defaults status todo and priority medium; client-supplied status, id, and timestamps are ignored.
@@ -99,16 +99,17 @@ Assertions:
 - Filtered lists contain exactly the expected IDs in ascending order.
 - Rejections return 400 with a single {"error": ...} object.
 
-Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets are served and nonempty.
+Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets /static/app.js and /static/style.css are served with nonempty bodies and the interactive client code is present.
 Level: integration
 Test file: taskboard/internal/web/ui_content_test.go
-Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
+Bead ID: ta-kf2
 Phase: phase-2-kanban
 Scenarios:
 - Root page contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
 - Status filter options are exactly all, todo, doing, done; priority filter options are exactly all, low, medium, high.
 - Root HTML references /static/app.js and /static/style.css.
-- Static app.js and style.css return 200 with nonempty bodies.
+- GET /static/app.js and GET /static/style.css return 200 with nonempty bodies and expected content types; the app.js body references the task and project API paths.
+- Asset references in the HTML match the served /static paths exactly.
 Assertions:
 - Status 200 and Content-Type text/html for the root page; expected substrings present.
 - Static bodies have nonzero length and expected content types.
