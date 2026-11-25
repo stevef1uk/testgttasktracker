@@ -137,14 +137,14 @@ Server entrypoint (`taskboard/cmd/taskboard/main.go`):
 - PostgreSQL store implementation in `taskboard/internal/store/postgres.go`:
   - Auto-creates projects and tasks tables using transactional advisory locks (pg_advisory_xact_lock) for safe concurrent execution.
 - Substantive store unit tests (`taskboard/internal/store/store_test.go`) and PostgreSQL integration tests (`taskboard/internal/store/postgres_integration_test.go`) asserting actual CRUD operations, foreign key constraints, filtering, and cascade behavior.
-- Application entrypoint in `taskboard/cmd/taskboard/main.go`, web router setup in `taskboard/internal/web/app.go`, project API endpoints in `taskboard/internal/web/api.go`, embedded templates in `taskboard/web/assets.go` and `taskboard/web/templates/index.html`, and API unit tests in `taskboard/internal/web/api_test.go`.
+- Application entrypoint in `taskboard/cmd/taskboard/main.go`, web router setup in `taskboard/internal/web/app.go`, project API endpoints in `taskboard/internal/web/api.go`, embedded assets in `taskboard/web/assets.go` (using `//go:embed templates/*` initially), HTML template in `taskboard/web/templates/index.html`, and API unit tests in `taskboard/internal/web/api_test.go`.
 
 ### phase-2-kanban
 - Tasks API endpoints and dynamic rendering of Kanban dashboard.
-- Dynamic asset embedding extending `taskboard/web/assets.go` with `taskboard/web/static/app.js` and `taskboard/web/static/style.css`.
+- Dynamic asset embedding extending `taskboard/web/assets.go` to `//go:embed templates/* static/*` with static assets `taskboard/web/static/app.js` and `taskboard/web/static/style.css`.
+- App unit tests (`taskboard/internal/web/app_test.go`) and UI content unit tests (`taskboard/internal/web/ui_content_test.go`).
 - UI JavaScript logic (`taskboard/web/static/app.js`) supporting task creation/editing, status progression across Kanban columns, and filtering by status and priority.
 - CSS styling (`taskboard/web/static/style.css`) for responsive Kanban column layout.
-- App unit tests (`taskboard/internal/web/app_test.go`) and UI content unit tests (`taskboard/internal/web/ui_content_test.go`).
 
 ### phase-3-browser
 - Playwright E2E integration test suite (`taskboard/playwright/taskboard.spec.ts`), dependencies (`taskboard/package.json`, `taskboard/package-lock.json`), and configuration (`taskboard/playwright.config.ts`).
@@ -266,8 +266,8 @@ delivery_phases:
       taskboard/internal/store/postgres.go: [taskboard/internal/store/store.go]
       taskboard/internal/store/store_test.go: [taskboard/internal/store/sqlite.go]
       taskboard/internal/store/postgres_integration_test.go: [taskboard/internal/store/postgres.go]
-      taskboard/internal/web/app.go: [taskboard/internal/store/store.go]
-      taskboard/internal/web/api.go: [taskboard/internal/web/app.go]
+      taskboard/internal/web/app.go: [taskboard/web/assets.go, taskboard/internal/store/store.go]
+      taskboard/internal/web/api.go: [taskboard/internal/web/app.go, taskboard/internal/model/model.go, taskboard/internal/store/store.go]
       taskboard/web/assets.go: [taskboard/web/templates/index.html]
       taskboard/cmd/taskboard/main.go: [taskboard/internal/config/config.go, taskboard/internal/store/sqlite.go, taskboard/internal/web/app.go]
 

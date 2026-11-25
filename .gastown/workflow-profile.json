@@ -109,9 +109,12 @@
             "taskboard/internal/store/sqlite.go"
           ],
           "taskboard/internal/web/api.go": [
-            "taskboard/internal/web/app.go"
+            "taskboard/internal/web/app.go",
+            "taskboard/internal/model/model.go",
+            "taskboard/internal/store/store.go"
           ],
           "taskboard/internal/web/app.go": [
+            "taskboard/web/assets.go",
             "taskboard/internal/store/store.go"
           ],
           "taskboard/web/assets.go": [
@@ -211,11 +214,8 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-1-app",
+    "active_phase_id": "phase-1-core",
     "rewound_from_phase_id": "phase-2-kanban",
-    "completed_phase_ids": [
-      "phase-1-app"
-    ],
     "spec_summary": "",
     "min_architecture_bytes": 3200,
     "min_plan_bytes": 800,
