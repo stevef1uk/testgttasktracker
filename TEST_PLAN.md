@@ -5,8 +5,8 @@
 ### phase-1-core
 Requirement: Config reads TASKBOARD_DB_DRIVER, TASKBOARD_DB_PATH, TASKBOARD_DATABASE_URL, TASKBOARD_HOST, TASKBOARD_PORT with SPEC section 4 defaults; invalid driver, port, or missing PostgreSQL URL fail startup without echoing the URL.
 Level: unit
-Test file: taskboard/internal/config/config_test.go (conventional companion of taskboard/internal/config/config.go)
-Bead ID: ta-367
+Test file: taskboard/internal/config/config_test.go
+Bead ID: ta-rmn
 Phase: phase-1-core
 Scenarios:
 - No env set yields sqlite, taskboard.db, 127.0.0.1, 8080, empty URL.
@@ -19,7 +19,7 @@ Assertions:
 
 Requirement: Domain validation: project name trimmed to 1-80 code points; task title trimmed to 1-120; description verbatim up to 1000; status and priority enums exact.
 Level: unit
-Test file: taskboard/internal/model/model_test.go (conventional companion of taskboard/internal/model/model.go)
+Test file: taskboard/internal/model/model_test.go
 Bead ID: ta-qb9
 Phase: phase-1-core
 Scenarios:
@@ -34,7 +34,7 @@ Assertions:
 Requirement: SQLite store contract: idempotent schema creation, foreign keys enforced on every pooled connection, 5000 ms busy timeout, project and task CRUD, ascending ID order, status/priority filters combined with AND, partial PATCH, project delete cascades to tasks, persistence across close and reopen.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: ta-5rq
+Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
 Phase: phase-1-app
 Scenarios:
 - Fresh file schema is empty; second init on the same file keeps existing rows and runs no DROP or reset.
@@ -52,7 +52,7 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: ta-9ik
+Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
@@ -66,7 +66,7 @@ Assertions:
 Requirement: Project REST API: GET /api/health, GET /api/ready, GET and POST /api/projects, DELETE /api/projects/{project_id} with SPEC section 6 status codes and JSON shapes; GET / serves the embedded HTML shell.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: ta-or0
+Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
