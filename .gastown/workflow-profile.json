@@ -198,10 +198,11 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-3-browser",
+    "active_phase_id": "phase-4-deploy",
     "completed_phase_ids": [
       "phase-1-core",
-      "phase-2-kanban"
+      "phase-2-kanban",
+      "phase-3-browser"
     ],
     "spec_summary": "",
     "min_architecture_bytes": 3200,
