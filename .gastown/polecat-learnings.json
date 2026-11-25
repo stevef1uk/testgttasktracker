@@ -10,13 +10,6 @@
     },
     {
       "stack": "go",
-      "rule": "Test review lesson: task execution error: no structured outcome after 20 turns",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-24T22:02:53Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Repair implementation beads: ta-qb9",
       "source": "qa_rework",
       "hits": 1,
@@ -57,6 +50,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-25T07:26:48Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-kf2",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-25T09:05:08Z"
     }
   ]
 }
