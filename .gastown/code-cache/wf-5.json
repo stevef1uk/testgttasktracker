@@ -147,32 +147,40 @@
     "content": ".git\n.gitignore\n.github\n.vscode\n.idea\n**/*.test\n**/*.out\n*.log\ncoverage.out\nnode_modules\nplaywright-report\ntest-results\nblob-report\n.env\n.env.*\n*.pem\n*.key\ndeploy\nplaywright\nplaywright.config.ts\npackage.json\npackage-lock.json\nDockerfile\ndocker-compose*.yml\n.dockerignore",
     "md5": "fcbd92aee0591af5eef5f67365a1ea41",
     "validated": true,
-    "validated_at": "2026-11-25T10:07:23Z",
-    "created_at": "2026-11-25T10:07:23Z",
+    "validated_at": "2026-11-25T10:15:00Z",
+    "created_at": "2026-11-25T10:15:00Z",
+    "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
+  },
+  "4:taskboard/Dockerfile": {
+    "content": "# Multi-stage build for the taskboard web server.\n# Build context: taskboard/\n\n# Stage 1: Builder\n# go.mod requires Go \u003e= 1.26.1, so the builder must be 1.26 or newer.\nFROM golang:1.26-alpine AS builder\nWORKDIR /src\n\n# Copy dependency manifests first for layer caching.\nCOPY go.mod go.sum ./\nRUN go mod download\n\n# Copy the full source tree (templates and static assets are embedded via go:embed).\nCOPY . .\nRUN CGO_ENABLED=0 GOOS=linux go build -o /app/taskboard ./cmd/taskboard\n\n# Stage 2: Runtime\nFROM alpine:3.20\nRUN apk add --no-cache ca-certificates \\\n    \u0026\u0026 addgroup -S -g 10001 taskboard \\\n    \u0026\u0026 adduser -S -u 10001 -G taskboard taskboard\n\nWORKDIR /app\nCOPY --from=builder /app/taskboard /app/taskboard\n\nENV TASKBOARD_HOST=0.0.0.0\nEXPOSE 8080\n\nUSER 10001:10001\n\nCMD [\"/app/taskboard\"]",
+    "md5": "2ca3c8e06e0e4c4826619649a00bf82e",
+    "validated": true,
+    "validated_at": "2026-11-25T10:15:52Z",
+    "created_at": "2026-11-25T10:15:52Z",
     "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
   },
   "4:taskboard/deploy/k8s/deployment.yaml": {
     "content": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: taskboard\n  labels:\n    app: taskboard\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: taskboard\n  template:\n    metadata:\n      labels:\n        app: taskboard\n    spec:\n      containers:\n        - name: taskboard\n          image: taskboard:local\n          imagePullPolicy: IfNotPresent\n          ports:\n            - name: http\n              containerPort: 8080\n              protocol: TCP\n          env:\n            - name: DATABASE_URL\n              valueFrom:\n                secretKeyRef:\n                  name: taskboard-db\n                  key: database-url\n          readinessProbe:\n            httpGet:\n              path: /\n              port: http\n            initialDelaySeconds: 3\n            periodSeconds: 10\n          livenessProbe:\n            httpGet:\n              path: /\n              port: http\n            initialDelaySeconds: 10\n            periodSeconds: 20",
     "md5": "0ec5ec76770be39a41cc650756e2d82f",
     "validated": true,
-    "validated_at": "2026-11-25T10:07:23Z",
-    "created_at": "2026-11-25T10:07:23Z",
+    "validated_at": "2026-11-25T10:15:00Z",
+    "created_at": "2026-11-25T10:15:00Z",
     "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
   },
   "4:taskboard/deploy/k8s/secret.example.yaml": {
     "content": "# EXAMPLE ONLY. Do NOT apply this file unchanged and do NOT commit real credentials.\n# Create the real Secret out of band, for example:\n#   kubectl create secret generic taskboard-db \\\n#     --from-literal=database-url='postgres://\u003cuser\u003e:\u003cpassword\u003e@\u003chost\u003e:5432/taskboard?sslmode=require'\n# The Deployment references this Secret name and the key `database-url`.\napiVersion: v1\nkind: Secret\nmetadata:\n  name: taskboard-db\n  labels:\n    app: taskboard\ntype: Opaque\nstringData:\n  database-url: postgres://CHANGE_ME_USER:CHANGE_ME_PASSWORD@CHANGE_ME_HOST:5432/taskboard?sslmode=require",
     "md5": "b462e2cb758bd07f9fcf200efaf3d9b4",
     "validated": true,
-    "validated_at": "2026-11-25T10:07:23Z",
-    "created_at": "2026-11-25T10:07:23Z",
+    "validated_at": "2026-11-25T10:15:00Z",
+    "created_at": "2026-11-25T10:15:00Z",
     "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
   },
   "4:taskboard/deploy/k8s/service.yaml": {
     "content": "apiVersion: v1\nkind: Service\nmetadata:\n  name: taskboard\n  labels:\n    app: taskboard\nspec:\n  type: ClusterIP\n  selector:\n    app: taskboard\n  ports:\n    - name: http\n      port: 80\n      targetPort: http\n      protocol: TCP",
     "md5": "06a132b0cb04f8119c44bf0d25f604f7",
     "validated": true,
-    "validated_at": "2026-11-25T10:07:23Z",
-    "created_at": "2026-11-25T10:07:23Z",
+    "validated_at": "2026-11-25T10:15:00Z",
+    "created_at": "2026-11-25T10:15:00Z",
     "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
   }
 }
