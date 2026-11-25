@@ -46,17 +46,17 @@
     },
     {
       "stack": "go",
-      "rule": "Test review lesson: Repair implementation beads: ta-8l7",
-      "source": "qa_rework",
-      "hits": 2,
-      "updated_at": "2026-11-25T05:41:58Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Auto-routed to Polecat for test repair: Verify is green (go test ./..",
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-25T05:43:26Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-8l7",
+      "source": "qa_rework",
+      "hits": 3,
+      "updated_at": "2026-11-25T05:45:21Z"
     }
   ]
 }
