@@ -10,14 +10,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in main.go: cmd/taskboard/main_test.go:10:12: undefined: openStore",
-      "source": "verify_fix",
-      "bead_path": "taskboard/cmd/taskboard/main.go",
-      "hits": 1,
-      "updated_at": "2026-11-24T18:44:35Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Repair implementation beads: ta-me0",
       "source": "qa_rework",
       "hits": 1,
@@ -57,6 +49,14 @@
       "source": "qa_rework",
       "hits": 3,
       "updated_at": "2026-11-25T05:45:21Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in config.go: internal/store/postgres_test.go:18:20: undefined: store.NewPostgresStore",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/config/config.go",
+      "hits": 1,
+      "updated_at": "2026-11-25T06:26:33Z"
     }
   ]
 }
