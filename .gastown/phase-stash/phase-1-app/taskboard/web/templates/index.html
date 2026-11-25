@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TaskBoard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>TaskBoard</h1>
+  </header>
+  <main>
+    <section id="projects-panel">
+      <h2>Projects</h2>
+      <form id="project-form">
+        <input id="project-name" name="name" type="text" maxlength="80" required placeholder="Project name">
+        <button id="project-create" type="submit">Create project</button>
+      </form>
+      <ul id="project-list"></ul>
+    </section>
+    <section id="tasks-panel">
+      <h2>Tasks</h2>
+      <form id="task-form">
+        <input id="task-title" name="title" type="text" maxlength="120" required placeholder="Task title">
+        <textarea id="task-description" name="description" maxlength="1000" placeholder="Description"></textarea>
+        <select id="task-status" name="status">
+          <option value="todo">todo</option>
+          <option value="doing">doing</option>
+          <option value="done">done</option>
+        </select>
+        <select id="task-priority" name="priority">
+          <option value="low">low</option>
+          <option value="medium" selected>medium</option>
+          <option value="high">high</option>
+        </select>
+        <button id="task-create" type="submit">Create task</button>
+      </form>
+      <div id="status-filter">
+        <select id="filter-status">
+          <option value="">all statuses</option>
+          <option value="todo">todo</option>
+          <option value="doing">doing</option>
+          <option value="done">done</option>
+        </select>
+        <select id="filter-priority">
+          <option value="">all priorities</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
+      </div>
+      <ul id="task-list"></ul>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
