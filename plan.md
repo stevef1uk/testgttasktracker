@@ -16,6 +16,8 @@ The Dockerfile bead must fully replace that file. Do not patch it line by line. 
 
 Do not lower `go.mod`. SPEC §2 requires Go >= 1.25, so a 1.26 builder satisfies it.
 
+The cached `deployment.yaml` also needs amendment. Its probes use `/` and its env var is `DATABASE_URL`. Architecture requires probes on `/api/health` (liveness) and `/api/ready` (readiness), and env `TASKBOARD_DB_DRIVER` plus `TASKBOARD_DATABASE_URL` from Secret key `database-url`. The polecat must follow architecture, not the cached content.
+
 ## Bead map
 
 ### ta-uns: taskboard/Dockerfile
@@ -62,12 +64,12 @@ Do not lower `go.mod`. SPEC §2 requires Go >= 1.25, so a 1.26 builder satisfies
 ### ta-om9: taskboard/deploy/k8s/deployment.yaml
 - Scope: Single-replica Kubernetes Deployment for TaskBoard.
 - Architecture: Port 8080, liveness `GET /api/health`, readiness `GET /api/ready`, and `TASKBOARD_DB_DRIVER` plus `TASKBOARD_DATABASE_URL` injected from Secret key `database-url`.
-- Interfaces: Container port 8080 named `http`; env `TASKBOARD_HOST=0.0.0.0`; `TASKBOARD_DB_DRIVER=postgres`; Secret reference `database-url`.
+- Interfaces: Container port 8080 named `http`; env `TASKBOARD_HOST=0.0.0.0`; `TASKBOARD_DB_DRIVER=postgres`; `TASKBOARD_DATABASE_URL` from Secret `database-url`.
 - Depends on: taskboard/deploy/k8s/secret.example.yaml
 - Consumed by: taskboard/deploy/k8s/service.yaml
 - Acceptance:
   - `replicas: 1`; image name is replaceable and not tied to a registry.
-  - Probes use `/api/health` (liveness) and `/api/ready` (readiness), not `/`.
+  - Readiness probe uses `/api/ready` and liveness uses `/api/health`, not `/`.
   - Non-root `securityContext`; no privileged container, host networking, or hostPath volume.
   - Resource requests and limits are set.
   - No PostgreSQL Deployment, StatefulSet, or TaskBoard PVC.
