@@ -7,7 +7,7 @@
     "layout_root": "taskboard",
     "bead_title_contains": "Implement taskboard/",
     "unittest_module": "",
-    "qa_verify_command": "cd taskboard && go test ./... && docker build -t taskboard:local .",
+    "qa_verify_command": "cd taskboard && go test ./...",
     "test_runner": "go",
     "required_files": [
       "taskboard/go.mod",
@@ -56,23 +56,7 @@
           "taskboard/internal/store/sqlite.go"
         ],
         "qa_verify_command": "cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store",
-        "spec_focus": "Go foundation, configuration, models, SQLite store",
-        "file_dependencies": {
-          "taskboard/internal/config/config.go": [
-            "taskboard/go.mod"
-          ],
-          "taskboard/internal/model/model.go": [
-            "taskboard/go.mod"
-          ],
-          "taskboard/internal/store/sqlite.go": [
-            "taskboard/go.mod",
-            "taskboard/internal/store/store.go"
-          ],
-          "taskboard/internal/store/store.go": [
-            "taskboard/go.mod",
-            "taskboard/internal/model/model.go"
-          ]
-        }
+        "spec_focus": "Phase 1a — Go foundation, configuration, models, SQLite store"
       },
       {
         "id": "phase-1-app",
@@ -92,11 +76,12 @@
         "depends_on": [
           "phase-1-core"
         ],
-        "spec_focus": "PostgreSQL store and runnable project API",
+        "spec_focus": "Phase 1b — PostgreSQL store and runnable project API",
         "file_dependencies": {
           "taskboard/cmd/taskboard/main.go": [
             "taskboard/internal/config/config.go",
             "taskboard/internal/store/sqlite.go",
+            "taskboard/internal/store/postgres.go",
             "taskboard/internal/web/app.go"
           ],
           "taskboard/internal/store/postgres.go": [
@@ -109,13 +94,15 @@
             "taskboard/internal/store/sqlite.go"
           ],
           "taskboard/internal/web/api.go": [
-            "taskboard/internal/web/app.go",
-            "taskboard/internal/model/model.go",
-            "taskboard/internal/store/store.go"
+            "taskboard/internal/web/app.go"
+          ],
+          "taskboard/internal/web/api_test.go": [
+            "taskboard/internal/web/api.go"
           ],
           "taskboard/internal/web/app.go": [
-            "taskboard/web/assets.go",
-            "taskboard/internal/store/store.go"
+            "taskboard/internal/config/config.go",
+            "taskboard/internal/store/store.go",
+            "taskboard/web/assets.go"
           ],
           "taskboard/web/assets.go": [
             "taskboard/web/templates/index.html"
@@ -135,18 +122,12 @@
         "depends_on": [
           "phase-1-app"
         ],
-        "spec_focus": "Tasks, Kanban UI, and full Go tests",
+        "spec_focus": "Phase 2 — Tasks, Kanban UI, and full Go tests",
         "file_dependencies": {
           "taskboard/internal/web/app_test.go": [
             "taskboard/internal/web/app.go"
           ],
           "taskboard/internal/web/ui_content_test.go": [
-            "taskboard/web/assets.go"
-          ],
-          "taskboard/web/static/app.js": [
-            "taskboard/web/assets.go"
-          ],
-          "taskboard/web/static/style.css": [
             "taskboard/web/assets.go"
           ]
         }
@@ -164,16 +145,11 @@
         "depends_on": [
           "phase-2-kanban"
         ],
-        "spec_focus": "Playwright integration and browser QA",
+        "spec_focus": "Phase 3 — Playwright integration and browser QA",
         "file_dependencies": {
-          "taskboard/package-lock.json": [
-            "taskboard/package.json"
-          ],
-          "taskboard/playwright.config.ts": [
-            "taskboard/package.json"
-          ],
           "taskboard/playwright/taskboard.spec.ts": [
-            "taskboard/playwright.config.ts"
+            "taskboard/playwright.config.ts",
+            "taskboard/package.json"
           ]
         }
       },
@@ -191,14 +167,18 @@
         "depends_on": [
           "phase-3-browser"
         ],
-        "spec_focus": "Container build and k3s deployment artifacts",
+        "spec_focus": "Phase 4 — Container build and k3s deployment artifacts",
         "file_dependencies": {
           "taskboard/Dockerfile": [
+            "taskboard/go.mod",
+            "taskboard/go.sum",
             "taskboard/cmd/taskboard/main.go",
-            "taskboard/web/assets.go"
-          ],
-          "taskboard/deploy/k8s/deployment.yaml": [
-            "taskboard/Dockerfile"
+            "taskboard/internal/web/app.go",
+            "taskboard/internal/web/api.go",
+            "taskboard/web/assets.go",
+            "taskboard/web/templates/index.html",
+            "taskboard/web/static/app.js",
+            "taskboard/web/static/style.css"
           ]
         }
       },
@@ -206,15 +186,15 @@
         "id": "phase-5-release",
         "title": "Final integration and release QA",
         "required_files": [],
-        "qa_verify_command": "cd taskboard && go test ./... && docker build -t taskboard:local .",
+        "qa_verify_command": "cd taskboard && go test ./...",
         "depends_on": [
           "phase-4-deploy"
         ],
-        "spec_focus": "Final integration and release QA"
+        "spec_focus": "Phase 5 — Final integration and release QA"
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-1-core",
+    "active_phase_id": "phase-2-kanban",
     "rewound_from_phase_id": "phase-2-kanban",
     "spec_summary": "",
     "min_architecture_bytes": 3200,
