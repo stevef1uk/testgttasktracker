@@ -187,7 +187,19 @@ Task POST: `{"title":"Build API","description":"Details","priority":"high"}`. De
 - Project deletion requires `window.confirm`, cascades to tasks, and refreshes the selection.
 - Show useful empty states for no projects and no matching tasks; show API failures in a visible error region.
 - Insert user-provided text using `textContent` or safe DOM APIs; never interpolate user text into `innerHTML`.
-- Vanilla JavaScript and CSS only; no drag-and-drop, frameworks, build step, animations, or icon dependencies. Layout remains usable at desktop and narrow widths.
+- Vanilla JavaScript and CSS only; no drag-and-drop, frameworks, build step, animations, or external icon dependencies. Layout remains usable at desktop and narrow widths.
+
+### Visual design system & styling
+- **Color palette**: Clean modern theme with slate neutral canvas (`#f8fafc`), crisp white cards (`#ffffff`) with subtle borders (`#e2e8f0`), dark slate text hierarchy (`#0f172a` primary, `#64748b` secondary), and indigo primary accent (`#4f46e5`).
+- **Typography & Layout**: Clean modern system font stack (`system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`).
+- **3-Column Kanban Board**: Responsive 3-column CSS Grid or Flexbox layout for `#kanban-board` (`To Do`, `Doing`, `Done` rendered side-by-side with equal widths on desktop, wrapping or scrolling gracefully on smaller screens). Each column has a distinct header with column title, subtle background tint, rounded corners (`border-radius: 8px`), and a task count chip.
+- **Card Aesthetics**: Cards styled with elevation, rounded corners (`border-radius: 8px`), subtle box shadow (`box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08)`), comfortable padding, and interactive hover elevation.
+- **Priority Pill Badges**: Visual pill badges for priority levels:
+  - `low`: subtle slate/gray badge (e.g. background `#f1f5f9`, text `#475569`, border `#cbd5e1`)
+  - `medium`: warm amber badge (e.g. background `#fef3c7`, text `#92400e`, border `#fde68a`)
+  - `high`: rose/red badge (e.g. background `#fee2e2`, text `#991b1b`, border `#fecaca`)
+- **Buttons & Action Controls**: Primary actions (`Create project`, `Add task`) styled with solid indigo fill and hover state; card actions (`Move forward`, `Edit`) styled with clean secondary pill/outline styling; `Delete` styled with subtle danger hover state.
+- **Form Controls**: Modern styled text inputs, textareas, and select dropdowns with consistent padding, rounded corners (`border-radius: 6px`), border `#cbd5e1`, and focus rings (`outline: 2px solid #6366f1; outline-offset: 1px`).
 
 ## 8. Testing contract
 
