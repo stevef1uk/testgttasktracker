@@ -1,6 +1,6 @@
 # Build output
 /bin/
-/taskboard
+/taskboard/taskboard
 *.exe
 *.test
 *.out

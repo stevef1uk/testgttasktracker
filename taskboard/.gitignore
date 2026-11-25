@@ -1,0 +1,24 @@
+# Build output
+/bin/
+/taskboard
+*.exe
+*.test
+*.out
+
+# Local SQLite databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Node and test artifacts
+node_modules/
+taskboard/node_modules/
+playwright-report/
+test-results/
+blob-report/
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
