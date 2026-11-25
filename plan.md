@@ -1,51 +1,45 @@
-# Implementation plan
+# Implementation plan: phase-2-kanban
 
-Active phase: phase-2-kanban (Tasks, Kanban UI, full Go tests).
-Scope: only the four required_files for this phase. Other phases get their own beads later.
+Scope: Tasks, Kanban UI, and full Go tests. Only the four files below belong to this phase. Later phases get their own beads. Bead IDs come from `bd list --limit=0 --status=open,in_progress` in this session.
 
 ## Bead map
 
 ### ta-bsk: taskboard/web/static/app.js
-- Scope: Frontend JS dynamics: fetch calls to the SPEC API routes (GET /api/projects, GET /api/projects/{project_id}/tasks, POST /api/projects/{project_id}/tasks, PATCH /api/tasks/{task_id}, DELETE /api/tasks/{task_id}), task status updates, and status and priority filters.
-- Architecture: taskboard/web/static/app.js owns frontend JS dynamics, fetch calls, status updates, and filters. It must not define template structure.
-- Interfaces: none (browser script, no Go exports).
-- Depends on: <none>
-- Consumed by: taskboard/internal/web/ui_content_test.go (asserts the asset is embedded and non-empty).
-- Acceptance: the script is served at GET /static/app.js with a JavaScript content type.
-- Acceptance: moving a task between todo, doing, and done issues PATCH /api/tasks/{task_id} with the new status.
-- Acceptance: the status and priority filters update the rendered board without a page reload.
-- Verify: cd taskboard && go test ./internal/web/...
+- Scope: Frontend JavaScript for project selection, task create/edit/delete, move-forward between To Do, Doing, and Done, status and priority filters, visible errors, and empty states. No new frontend build tool.
+- Architecture: architecture.md lists app.js under frontend JS dynamics, fetch calls, status updates, and filters, depending on the template structure. SPEC route table: `GET /static/app.js` serves the embedded JavaScript asset.
+- Interfaces: served at `GET /static/app.js` with a JavaScript content type. Calls the REST routes in the SPEC route table (`/api/projects`, `/api/health`, `/api/ready`, plus the task routes defined in SPEC §7).
+- Depends on: taskboard/web/templates/index.html (element IDs and form structure), taskboard/internal/web/api.go (REST handlers).
+- Consumed by: taskboard/internal/web/ui_content_test.go (asserts the asset is non-empty and served).
+- Acceptance: the file is non-empty and references the three Kanban columns To Do, Doing, and Done. Move-forward issues a task status update request. Status and priority filters and visible error display are wired to the page.
+- Verify: cd taskboard && go test ./...
 
 ### ta-lkt: taskboard/web/static/style.css
-- Scope: UI styles for the Kanban board, including column layout and responsive design.
-- Architecture: taskboard/web/static/style.css owns UI styles and column responsive design. It must not define JS behavior.
-- Interfaces: none (stylesheet).
-- Depends on: <none>
-- Consumed by: taskboard/internal/web/ui_content_test.go (asserts the stylesheet is embedded and non-empty).
-- Acceptance: the stylesheet is embedded in taskboard/web/assets.go and served by the same static asset handler as app.js.
-- Acceptance: the To Do, Doing, and Done columns lay out side by side and wrap on narrow viewports.
-- Verify: cd taskboard && go test ./internal/web/...
+- Scope: Stylesheet for the TaskBoard layout, forms, and responsive Kanban columns.
+- Architecture: architecture.md lists style.css under UI styles and column responsive design, independent of JS behavior. It is embedded in taskboard/web/assets.go and served by the static asset handler with a CSS content type (SPEC §7 prose).
+- Interfaces: static asset only; no exported Go symbols. The served route is recorded under Future considerations because the SPEC route table does not list it.
+- Depends on: taskboard/web/templates/index.html (class names used by the template).
+- Consumed by: taskboard/internal/web/ui_content_test.go (asserts the asset is non-empty).
+- Acceptance: the file is non-empty. Kanban columns sit side by side on wide viewports and wrap on narrow ones.
+- Verify: cd taskboard && go test ./...
 
 ### ta-88r: taskboard/internal/web/app_test.go
-- Scope: Tests for HTTP router setup, static asset routing, and server lifecycle.
-- Architecture: taskboard/internal/web/app_test.go owns router and server initialization tests. It must not contain direct store integration tests.
-- Interfaces: none (test file).
-- Depends on: taskboard/internal/web/app.go, taskboard/web/assets.go
-- Consumed by: <none>
-- Acceptance: GET / returns the rendered index template.
-- Acceptance: GET /static/app.js returns 200 with a JavaScript content type.
-- Acceptance: the server starts and shuts down gracefully on context cancel.
-- Verify: cd taskboard && go test ./internal/web/...
+- Scope: Tests for HTTP routing, static asset routing, and server initialization, using direct store integration.
+- Architecture: architecture.md lists app_test.go for test router setup, static asset routing, and server lifecycle. It depends on the store and api.go handlers.
+- Interfaces: test functions only; no exported symbols.
+- Depends on: taskboard/internal/web/api.go, taskboard/internal/web/app.go, taskboard/web/assets.go.
+- Consumed by: none.
+- Acceptance: `GET /` returns HTML containing TaskBoard and the three Kanban headings. `GET /static/app.js` returns 200 with a JavaScript content type. Health and ready routes return 200. Project and task CRUD and filtering behave as SPEC §7 describes.
+- Verify: cd taskboard && go test ./...
 
 ### ta-kf2: taskboard/internal/web/ui_content_test.go
-- Scope: Unit tests asserting the embedded index template and static assets render non-empty responses.
-- Architecture: taskboard/internal/web/ui_content_test.go owns asset and template content tests. It must not contain REST API JSON tests.
-- Interfaces: none (test file).
-- Depends on: taskboard/web/assets.go, taskboard/web/static/app.js, taskboard/web/static/style.css
-- Consumed by: <none>
-- Acceptance: the index template is non-empty and contains the task list and project list containers.
-- Acceptance: taskboard/web/static/app.js and taskboard/web/static/style.css are non-empty embedded assets.
-- Verify: cd taskboard && go test ./internal/web/...
+- Scope: Unit tests asserting that embedded templates and static assets render valid, non-empty responses.
+- Architecture: architecture.md lists ui_content_test.go for asserting the index template and static assets render valid non-empty responses. It must not duplicate REST JSON tests.
+- Interfaces: test functions only; no exported symbols.
+- Depends on: taskboard/web/assets.go (embedded files), taskboard/web/static/app.js, taskboard/web/static/style.css.
+- Consumed by: none.
+- Acceptance: the embedded index template renders without error and contains the three Kanban headings. app.js and style.css are non-empty.
+- Verify: cd taskboard && go test ./...
 
 ## Future considerations
-- The index template taskboard/web/templates/index.html belongs to completed phase-1-app. Its Kanban column and status-control repair is handled by the QA rewind, not this phase's plan.
+- SPEC §7 prose says `/static/style.css` is served, but the SPEC route table lists only `/static/app.js`. This plan does not add a stylesheet route to any HTTP table. The architect should confirm whether the stylesheet route belongs in the canonical table before phase-2-kanban is accepted.
+- Anything outside phase-2-kanban is deferred to its own phase.
