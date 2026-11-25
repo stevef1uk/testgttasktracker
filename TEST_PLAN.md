@@ -34,7 +34,7 @@ Assertions:
 Requirement: SQLite store contract: idempotent schema creation, foreign keys enforced on every pooled connection, 5000 ms busy timeout, project and task CRUD, ascending ID order, status/priority filters combined with AND, partial PATCH, project delete cascades to tasks, persistence across close and reopen.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: ta-82r
+Bead ID: ta-5rq
 Phase: phase-1-app
 Scenarios:
 - Fresh file schema is empty; second init on the same file keeps existing rows and runs no DROP or reset.
@@ -52,7 +52,7 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: ta-5qb
+Bead ID: ta-9ik
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
@@ -66,7 +66,7 @@ Assertions:
 Requirement: Project REST API: GET /api/health, GET /api/ready, GET and POST /api/projects, DELETE /api/projects/{project_id} with SPEC section 6 status codes and JSON shapes; GET / serves the embedded HTML shell.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: ta-8l7
+Bead ID: ta-or0
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
@@ -74,7 +74,7 @@ Scenarios:
 - Project create returns 201 with JSON; blank name returns 400 with an error object.
 - Project list returns [] when empty and ascending ID order otherwise; delete returns 204 with empty body, then 404 for missing.
 - Malformed JSON and invalid IDs return documented 400 or 404.
-- GET / returns 200 text/html containing the TaskBoard heading and To Do, Doing, Done column headers.
+- GET / returns 200 text/html containing the TaskBoard heading and the project form; Kanban column headers are asserted in phase-2-kanban (ui_content_test.go).
 - Storage failure returns safe 500 JSON with no SQL text; project list failure returns 500, never an empty array.
 Assertions:
 - Decoded JSON values, keys, and types match SPEC; whitespace is not asserted.
