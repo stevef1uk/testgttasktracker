@@ -7,7 +7,7 @@
     "layout_root": "taskboard",
     "bead_title_contains": "Implement taskboard/",
     "unittest_module": "",
-    "qa_verify_command": "cd taskboard && go test ./...",
+    "qa_verify_command": "cd taskboard && go test ./... && docker build -t taskboard:local .",
     "test_runner": "go",
     "required_files": [
       "taskboard/go.mod",
@@ -53,14 +53,24 @@
           "taskboard/internal/config/config.go",
           "taskboard/internal/model/model.go",
           "taskboard/internal/store/store.go",
-          "taskboard/internal/store/sqlite.go",
-          "taskboard/internal/store/postgres.go"
+          "taskboard/internal/store/sqlite.go"
         ],
         "qa_verify_command": "cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store",
         "spec_focus": "Go foundation, configuration, models, SQLite store",
         "file_dependencies": {
-          "taskboard/internal/store/postgres.go": [
+          "taskboard/internal/config/config.go": [
+            "taskboard/go.mod"
+          ],
+          "taskboard/internal/model/model.go": [
+            "taskboard/go.mod"
+          ],
+          "taskboard/internal/store/sqlite.go": [
+            "taskboard/go.mod",
             "taskboard/internal/store/store.go"
+          ],
+          "taskboard/internal/store/store.go": [
+            "taskboard/go.mod",
+            "taskboard/internal/model/model.go"
           ]
         }
       },
@@ -68,6 +78,7 @@
         "id": "phase-1-app",
         "title": "PostgreSQL store and runnable project API",
         "required_files": [
+          "taskboard/internal/store/postgres.go",
           "taskboard/internal/store/store_test.go",
           "taskboard/internal/store/postgres_integration_test.go",
           "taskboard/cmd/taskboard/main.go",
@@ -84,24 +95,24 @@
         "spec_focus": "PostgreSQL store and runnable project API",
         "file_dependencies": {
           "taskboard/cmd/taskboard/main.go": [
+            "taskboard/internal/config/config.go",
+            "taskboard/internal/store/sqlite.go",
             "taskboard/internal/web/app.go"
+          ],
+          "taskboard/internal/store/postgres.go": [
+            "taskboard/internal/store/store.go"
           ],
           "taskboard/internal/store/postgres_integration_test.go": [
             "taskboard/internal/store/postgres.go"
           ],
           "taskboard/internal/store/store_test.go": [
-            "taskboard/internal/store/sqlite.go",
-            "taskboard/internal/store/postgres.go"
+            "taskboard/internal/store/sqlite.go"
           ],
           "taskboard/internal/web/api.go": [
             "taskboard/internal/web/app.go"
           ],
-          "taskboard/internal/web/api_test.go": [
-            "taskboard/internal/web/api.go"
-          ],
           "taskboard/internal/web/app.go": [
-            "taskboard/internal/store/store.go",
-            "taskboard/web/assets.go"
+            "taskboard/internal/store/store.go"
           ],
           "taskboard/web/assets.go": [
             "taskboard/web/templates/index.html"
@@ -127,7 +138,7 @@
             "taskboard/internal/web/app.go"
           ],
           "taskboard/internal/web/ui_content_test.go": [
-            "taskboard/internal/web/app.go"
+            "taskboard/web/assets.go"
           ],
           "taskboard/web/static/app.js": [
             "taskboard/web/assets.go"
@@ -152,6 +163,12 @@
         ],
         "spec_focus": "Playwright integration and browser QA",
         "file_dependencies": {
+          "taskboard/package-lock.json": [
+            "taskboard/package.json"
+          ],
+          "taskboard/playwright.config.ts": [
+            "taskboard/package.json"
+          ],
           "taskboard/playwright/taskboard.spec.ts": [
             "taskboard/playwright.config.ts"
           ]
@@ -174,7 +191,8 @@
         "spec_focus": "Container build and k3s deployment artifacts",
         "file_dependencies": {
           "taskboard/Dockerfile": [
-            "taskboard/cmd/taskboard/main.go"
+            "taskboard/cmd/taskboard/main.go",
+            "taskboard/web/assets.go"
           ],
           "taskboard/deploy/k8s/deployment.yaml": [
             "taskboard/Dockerfile"
@@ -185,7 +203,7 @@
         "id": "phase-5-release",
         "title": "Final integration and release QA",
         "required_files": [],
-        "qa_verify_command": "cd taskboard && go test ./...",
+        "qa_verify_command": "cd taskboard && go test ./... && docker build -t taskboard:local .",
         "depends_on": [
           "phase-4-deploy"
         ],
@@ -193,7 +211,7 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-1-core",
+    "active_phase_id": "phase-1-app",
     "rewound_from_phase_id": "phase-1-app",
     "spec_summary": "",
     "min_architecture_bytes": 3200,

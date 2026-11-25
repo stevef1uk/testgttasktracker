@@ -58,107 +58,168 @@ PostgreSQL runtime launch command from SPEC:
 | File | Owns (exported) | Must not define |
 | --- | --- | --- |
 | `taskboard/internal/config/config.go` | Config struct, LoadConfig function | Database queries, HTTP handlers |
-| `taskboard/internal/model/model.go` | Project struct, Task struct, Status and Priority types/constants, ValidateProject, ValidateTask functions | SQL DDL statements, HTTP responses |
+| `taskboard/internal/model/model.go` | Project struct, Task struct, Status and Priority types/constants, TaskFilter struct, ValidateProject, ValidateTask functions | SQL DDL statements, HTTP responses |
 | `taskboard/internal/store/store.go` | Store interface, ErrNotFound and repository error constants, DDL schema constants | HTTP routing logic |
 | `taskboard/internal/store/sqlite.go` | SQLiteStore struct, NewSQLiteStore function | Postgres SQL dialect syntax |
 | `taskboard/internal/store/postgres.go` | PostgresStore struct, NewPostgresStore function | SQLite PRAGMA commands |
 | `taskboard/web/assets.go` | FS embed variable | Business logic |
 | `taskboard/internal/web/app.go` | App struct, NewApp function | SQL statements |
 | `taskboard/internal/web/api.go` | API route handler methods on App struct | Template rendering |
-| `taskboard/cmd/taskboard/main.go` | main function | Core package helper routines |
-| `taskboard/web/templates/index.html` | HTML layout template | Client-side JavaScript |
-| `taskboard/web/static/app.js` | Browser JavaScript UI state handling | Server-side template compilation |
-| `taskboard/web/static/style.css` | Plain CSS layout styles | JavaScript DOM manipulators |
-| `taskboard/deploy/k8s/deployment.yaml` | Kubernetes Deployment specification | Application code |
-| `taskboard/deploy/k8s/service.yaml` | Kubernetes Service specification | Secrets |
-| `taskboard/deploy/k8s/secret.example.yaml` | Kubernetes Secret example template | Real production passwords |
-| `taskboard/playwright.config.ts` | Playwright test runner configuration | Backend Go unit tests |
-| `taskboard/playwright/taskboard.spec.ts` | Playwright E2E browser tests | Go unit test assertions |
+| `taskboard/cmd/taskboard/main.go` | main function | Business domain logic |
+
+## Store interface signatures
+
+The shared database contract is defined in `taskboard/internal/store/store.go`:
+
+```go
+type Store interface {
+	CreateProject(ctx context.Context, p *model.Project) error
+	ListProjects(ctx context.Context) ([]*model.Project, error)
+	DeleteProject(ctx context.Context, id int64) error
+	CreateTask(ctx context.Context, t *model.Task) error
+	ListTasks(ctx context.Context, filter model.TaskFilter) ([]*model.Task, error)
+	UpdateTask(ctx context.Context, t *model.Task) error
+	DeleteTask(ctx context.Context, id int64) error
+	Close() error
+}
+```
 
 ## HTTP + entrypoint integration
 
-### Standardized HTTP API Table
+HTML UI is served at GET / using embedded templates from `taskboard/web/templates/index.html`. Static assets are served at GET /static/app.js and static style assets from `taskboard/web/static/style.css`.
 
-| HTTP Method | Route / Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/health` | Liveness check (returns JSON {"status":"ok"}) |
-| `GET` | `/api/ready` | Readiness check (verifies database ping/connection) |
-| `GET` | `/api/projects` | List all projects |
-| `POST` | `/api/projects` | Create a new project (JSON body: {"name":"..."}) |
-| `DELETE` | `/api/projects/{project_id}` | Delete project and all associated tasks |
-| `GET` | `/api/projects/{project_id}/tasks` | List tasks for a project (optional query params: status, priority) |
-| `POST` | `/api/projects/{project_id}/tasks` | Create task under project (JSON: {"title":"...","description":"...","priority":"..."}) |
-| `PATCH` | `/api/tasks/{task_id}` | Update task title, description, status, or priority |
-| `DELETE` | `/api/tasks/{task_id}` | Delete a task |
-| `GET` | `/` | Serve server-rendered HTML page (index.html via html/template) |
-| `GET` | `/static/*` | Serve embedded static assets (app.js, style.css) |
+| Method | Path | Success | Errors |
+| --- | --- | --- | --- |
+| GET | `/api/health` | 200 `{"status":"ok"}` | — |
+| GET | `/api/ready` | 200 `{"status":"ready"}` when DB responds | 503 `{"error":"database unavailable"}` |
+| GET | `/api/projects` | 200 JSON array ordered by ID | 500 on storage failure |
+| POST | `/api/projects` | 201 project JSON | 400 invalid name |
+| DELETE | `/api/projects/{project_id}` | 204 empty body | 404 missing |
+| GET | `/api/projects/{project_id}/tasks` | 200 JSON array ordered by ID | 404 missing project; 400 invalid filter |
+| POST | `/api/projects/{project_id}/tasks` | 201 task JSON | 404 missing project; 400 invalid fields |
+| PATCH | `/api/tasks/{task_id}` | 200 updated task JSON | 404 missing; 400 invalid fields |
+| DELETE | `/api/tasks/{task_id}` | 204 empty body | 404 missing |
 
-### Startup / dependency order
-config.LoadConfig → NewSQLiteStore / NewPostgresStore (with transactional advisory lock schema init) → web.NewApp → route registration → http.ListenAndServe → graceful SIGTERM shutdown
+Server entrypoint (`taskboard/cmd/taskboard/main.go`):
+1. Parses CLI flags / loads configuration via config.LoadConfig().
+2. Selects database driver based on TASKBOARD_DB_DRIVER (sqlite or postgres) and initializes NewSQLiteStore or NewPostgresStore.
+3. Creates web application instance passing the selected store.
+4. Registers static file handlers serving assets embedded in `taskboard/web/assets.go`.
+5. Starts HTTP server on configured host and port.
+6. Handles graceful SIGINT/SIGTERM shutdown.
 
-### Server Wiring Pattern
-1. Entrypoint `taskboard/cmd/taskboard/main.go` parses configuration settings from environment variables using `taskboard/internal/config/config.go` via `config.LoadConfig`.
-2. Based on TASKBOARD_DB_DRIVER (`sqlite` or `postgres`), instantiates store (`NewSQLiteStore` or `NewPostgresStore`) and runs schema setup (without silent fallback to SQLite if PostgreSQL connection fails).
-3. Instantiates HTTP app `web.NewApp` using `taskboard/internal/web/app.go` and embedded assets in `taskboard/web/assets.go` (`FS`).
-4. Registers REST routes and static file handler on standard library `net/http` ServeMux router.
-5. Starts HTTP server listening on configured `TASKBOARD_HOST:TASKBOARD_PORT`.
-6. Listens for SIGINT/SIGTERM to trigger graceful server shutdown with context timeout and database close.
+## Requirements
+
+### phase-1-core
+- Configuration loading from environment variables in `taskboard/internal/config/config.go`:
+  - TASKBOARD_PORT (default: 8080)
+  - TASKBOARD_HOST (default: 127.0.0.1)
+  - TASKBOARD_DB_DRIVER (supported: sqlite, postgres; default: sqlite)
+  - TASKBOARD_DB_PATH (default: taskboard.db)
+  - TASKBOARD_DATABASE_URL (default: empty string)
+- Domain models in `taskboard/internal/model/model.go`:
+  - Project struct (id int64, name string, created_at time.Time)
+  - Task struct (id int64, project_id int64, title string, description string, status string, priority string, created_at time.Time, updated_at time.Time)
+  - TaskFilter struct (project_id int64, status string, priority string)
+  - Unicode character count validation using utf8.RuneCountInString: Project name (1-80 runes), Task title (1-120 runes), Task description (max 1000 runes).
+  - Status enum validation: todo, doing, done.
+  - Priority enum validation: low, medium, high.
+- Store interface in `taskboard/internal/store/store.go` with exact methods: CreateProject, ListProjects, DeleteProject, CreateTask, ListTasks, UpdateTask, DeleteTask, Close.
+- SQLite store implementation in `taskboard/internal/store/sqlite.go`:
+  - Enables foreign keys (PRAGMA foreign_keys = ON;) on connection setup.
+  - Configures 5000ms busy timeout.
+  - Auto-creates projects and tasks tables if not existing.
+  - Supports cascading deletion of tasks when a project is deleted.
+
+### phase-1-app
+- PostgreSQL store implementation in `taskboard/internal/store/postgres.go`:
+  - Auto-creates projects and tasks tables using transactional advisory locks (pg_advisory_xact_lock) for safe concurrent execution.
+- Substantive store unit tests (`taskboard/internal/store/store_test.go`) and PostgreSQL integration tests (`taskboard/internal/store/postgres_integration_test.go`) asserting actual CRUD operations, foreign key constraints, filtering, and cascade behavior.
+- Application entrypoint in `taskboard/cmd/taskboard/main.go`, web router setup in `taskboard/internal/web/app.go`, project API endpoints in `taskboard/internal/web/api.go`, embedded templates in `taskboard/web/assets.go` and `taskboard/web/templates/index.html`, and API unit tests in `taskboard/internal/web/api_test.go`.
+
+### phase-2-kanban
+- Tasks API endpoints and dynamic rendering of Kanban dashboard.
+- Dynamic asset embedding extending `taskboard/web/assets.go` with `taskboard/web/static/app.js` and `taskboard/web/static/style.css`.
+- UI JavaScript logic (`taskboard/web/static/app.js`) supporting task creation/editing, status progression across Kanban columns, and filtering by status and priority.
+- CSS styling (`taskboard/web/static/style.css`) for responsive Kanban column layout.
+- App unit tests (`taskboard/internal/web/app_test.go`) and UI content unit tests (`taskboard/internal/web/ui_content_test.go`).
+
+### phase-3-browser
+- Playwright E2E integration test suite (`taskboard/playwright/taskboard.spec.ts`), dependencies (`taskboard/package.json`, `taskboard/package-lock.json`), and configuration (`taskboard/playwright.config.ts`).
+
+### phase-4-deploy
+- Multi-stage Dockerfile (`taskboard/Dockerfile`) building Go binary in builder stage and producing non-root minimal runtime image.
+- Dockerignore configuration in `taskboard/.dockerignore`.
+- Kubernetes deployment manifests (`taskboard/deploy/k8s/deployment.yaml`, `taskboard/deploy/k8s/service.yaml`, `taskboard/deploy/k8s/secret.example.yaml`).
+
+### phase-5-release
+- Final integration, end-to-end verification, browser QA checks, and container image deployment validation without new first-delivery files.
 
 ## Docker & Deployment
-
-### Application Dockerfile (`taskboard/Dockerfile`)
-1. Multi-stage build process:
-   - Builder stage: Pinned Go builder image (`golang:1.25-alpine`). Compiles `./cmd/taskboard` with `CGO_ENABLED=0` and `GOOS=linux`, supporting target architectures (`linux/amd64`, `linux/arm64`).
-   - Final runtime stage: Base image (`alpine:3.20`) with CA certificates installed (`ca-certificates`). Copies compiled static binary, sets non-root user UID 10001, and embeds runtime assets.
-2. Exposed port: `EXPOSE 8080`.
-3. Sets environment variable `TASKBOARD_HOST=0.0.0.0`.
-4. Entrypoint directive: `ENTRYPOINT ["/app/taskboard"]` or `CMD ["/app/taskboard"]`.
-
-### Kubernetes Setup
-- `taskboard/deploy/k8s/deployment.yaml` defines single replica deployment referencing TASKBOARD_DB_DRIVER and TASKBOARD_DATABASE_URL from Secret database-url. Liveness probe targets GET /api/health and readiness probe targets GET /api/ready.
-- `taskboard/deploy/k8s/service.yaml` exposes port 8080 as ClusterIP Service.
-- `taskboard/deploy/k8s/secret.example.yaml` provides example Kubernetes secret template.
+- Multi-stage build in `taskboard/Dockerfile`:
+  - Builder stage uses golang:1.25-alpine to compile binary with CGO_ENABLED=0 GOOS=linux.
+  - Final runtime stage uses alpine:3.20 or scratch/distroless with non-root user execution.
+- Copies compiled binary /app/taskboard and embedded static assets from builder stage.
+- Exposed port: EXPOSE 8080.
+- Runtime entrypoint: CMD ["/app/taskboard"].
 
 ## Unit tests
-- `taskboard/internal/store/store_test.go`: SQLite table initialization, CRUD for projects and tasks, cascading deletions, Unicode length checks, and filtering.
-- `taskboard/internal/web/api_test.go`: HTTP REST endpoint behavior, status codes (200, 201, 204, 400, 404, 500, 503), error JSON responses, filtering combinations.
-- `taskboard/internal/web/app_test.go`: HTML template rendering on GET /, content types for static assets.
-- `taskboard/internal/web/ui_content_test.go`: Specific HTML structure checks for forms, headings, and Kanban columns.
+- `taskboard/internal/store/store_test.go`: SQLite table creation, Project CRUD, Task CRUD with filters, cascade deletion, foreign key validation.
+- `taskboard/internal/store/postgres_integration_test.go`: PostgreSQL integration testing for Store methods when TASKBOARD_TEST_POSTGRES_URL is provided.
+- `taskboard/internal/web/api_test.go`: REST API route handler tests for status codes (200, 201, 204, 400, 404, 500), payload validation, filter parameters.
+- `taskboard/internal/web/app_test.go`: Web app routing, middleware, and lifecycle tests.
+- `taskboard/internal/web/ui_content_test.go`: Tests verifying template parsing and embedded static content delivery.
 
 ## Integration and testing
-### Strategy and Unit Test Structure
-The testing strategy separates fast, isolated backend Go tests from browser-based E2E scenarios:
-- Unit tests in `taskboard/internal/store/store_test.go` execute against isolated SQLite in-memory/temporary file instances using t.TempDir(), validating CRUD operations, foreign key cascades, Unicode code-point lengths (utf8.RuneCountInString), enum validation, and combined query filtering.
-- Web API unit tests in `taskboard/internal/web/api_test.go` use net/http/httptest to test router status codes, JSON payload formatting, non-overridable server-generated fields (created_at, updated_at, status on create), error structures ({"error": "message"}), and status code invariants (200, 201, 204, 400, 404, 500, 503).
-- UI content tests in `taskboard/internal/web/ui_content_test.go` assert template rendering, required HTML DOM elements (TaskBoard title, project creation forms, To Do / Doing / Done Kanban columns), and static file delivery content types.
 
-### Runtime Smoke Test
-A runtime smoke test validates the built application server end-to-end:
-1. Launch application binary or container: `cd taskboard && go run ./cmd/taskboard`
-2. Verify liveness endpoint: `curl -s http://127.0.0.1:8080/api/health` returns `{"status":"ok"}` with HTTP status 200.
-3. Verify readiness endpoint: `curl -s http://127.0.0.1:8080/api/ready` returns `{"status":"ready"}` with HTTP status 200.
-4. Perform project creation round trip: `curl -s -X POST -H "Content-Type: application/json" -d '{"name":"Smoke Test"}' http://127.0.0.1:8080/api/projects` returns HTTP 201 with project JSON.
-5. Verify HTML shell delivery: `curl -s http://127.0.0.1:8080/` returns HTML page containing "TaskBoard" heading and Kanban column headers.
+### Test Strategy
+The testing framework comprises unit, integration, and Playwright E2E tiers:
+- Domain model tests: validate utf8.RuneCountInString bounds (project name 1-80, task title 1-120, task description max 1000) and strict enums (todo, doing, done, low, medium, high).
+- Store contract tests: verify DDL idempotency, ascending ID ordering, parameterized queries, transactional atomicity, combined status/priority AND filtering, and CASCADE deletion on SQLite (t.TempDir()) and PostgreSQL.
+- HTTP API integration tests: exercise handlers using httptest.Server and httptest.ResponseRecorder for standard status codes (200, 201, 204, 400, 404, 500, 503) and JSON payload verification.
+- UI & Static Asset tests: assert go:embed asset loading for `taskboard/web/templates/index.html`, `taskboard/web/static/app.js`, and `taskboard/web/static/style.css`.
+- Browser E2E tests: automation via Playwright validating real control interactions, Kanban column transitions, filtering, and project deletion.
 
-Command to run all Go tests:
-`cd taskboard && go test ./...`
+### Unit Test Structure
+- `taskboard/internal/store/store_test.go`: SQLite storage unit tests for DDL, project/task CRUD, filters, and cascade delete.
+- `taskboard/internal/store/postgres_integration_test.go`: PostgreSQL integration tests executed when TASKBOARD_TEST_POSTGRES_URL is set.
+- `taskboard/internal/web/api_test.go`: REST API route handler tests for status codes, validation, filters, and JSON response bodies.
+- `taskboard/internal/web/app_test.go`: Web router setup, asset embedding, and server lifecycle unit tests.
+- `taskboard/internal/web/ui_content_test.go`: Template parsing and static asset content tests.
+
+### Runtime Smoke Test Procedure
+1. Start TaskBoard server locally with default SQLite configuration:
+   `cd taskboard && go run ./cmd/taskboard`
+2. Verify liveness and readiness endpoints:
+   - curl -s http://127.0.0.1:8080/api/health -> {"status":"ok"}
+   - curl -s http://127.0.0.1:8080/api/ready -> {"status":"ready"}
+3. Verify HTML UI dashboard and static assets:
+   - curl -s http://127.0.0.1:8080/ -> HTML page containing TaskBoard heading
+   - curl -s http://127.0.0.1:8080/static/app.js -> Non-empty JavaScript asset
+   - curl -s http://127.0.0.1:8080/static/style.css -> Non-empty CSS asset
+4. Execute REST API CRUD flow:
+   - Create project: curl -s -X POST -H "Content-Type: application/json" -d '{"name":"Demo"}' http://127.0.0.1:8080/api/projects
+   - List projects: curl -s http://127.0.0.1:8080/api/projects
+   - Create task: curl -s -X POST -H "Content-Type: application/json" -d '{"title":"Task 1","priority":"high"}' http://127.0.0.1:8080/api/projects/1/tasks
+   - List tasks: curl -s http://127.0.0.1:8080/api/projects/1/tasks
+   - Patch task: curl -s -X PATCH -H "Content-Type: application/json" -d '{"status":"doing"}' http://127.0.0.1:8080/api/tasks/1
+   - Delete task: curl -s -X DELETE http://127.0.0.1:8080/api/tasks/1
+   - Delete project: curl -s -X DELETE http://127.0.0.1:8080/api/projects/1
+5. Run full Go unit and integration test suite:
+   `cd taskboard && go test ./...`
 
 ## E2E / integration testing
-### Playwright Browser E2E Test Suite
-Browser-based E2E testing is configured via `taskboard/playwright.config.ts` and implemented in `taskboard/playwright/taskboard.spec.ts` using `@playwright/test`:
-- Tests execute against a running TaskBoard application instance on host 127.0.0.1:8080.
-- `taskboard/playwright/taskboard.spec.ts` tests real user workflows including creating a project via UI input controls, adding a task, advancing task status from `todo` to `doing` and `done` using the `Move forward` button, priority filtering (`high`/`medium`/`low`), and task deletion.
-- Every test creates isolated test data with unique names and cleans up after completion.
+- Playwright suite in `taskboard/playwright/taskboard.spec.ts` verifies end-to-end web UI interactions against a running server:
+  - Project creation and selection.
+  - Task creation in To Do column.
+  - Moving task state from To Do to In Progress to Done.
+  - Task filtering by status and priority.
+  - Project deletion and cascading task removal.
 
-Command to execute Playwright E2E tests:
-`cd taskboard && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`
-
-### PostgreSQL Integration Testing
-- Integration tests in `taskboard/internal/store/postgres_integration_test.go` execute when `TASKBOARD_TEST_POSTGRES_URL` environment variable is defined.
-- Exercises the store interface against a live PostgreSQL database, checking transactional advisory locks during schema setup, PostgreSQL identity primary key generation, UTC timestamp precision, parameter placeholder `$1` behavior, and foreign key cascade deletion.
-
-Command to build container image:
-`cd taskboard && docker build -t taskboard:local .`
+## Acceptance mapping
+- Modular store abstraction satisfies requirement for dynamic SQLite and PostgreSQL persistence without code modifications.
+- Complete HTTP route suite satisfies SPEC endpoints for REST API and HTML dashboard.
+- Containerization and Kubernetes manifests provide ready-to-deploy specifications for k3s cluster environments.
 
 ## Delivery phases
 
@@ -176,17 +237,19 @@ delivery_phases:
       - taskboard/internal/model/model.go
       - taskboard/internal/store/store.go
       - taskboard/internal/store/sqlite.go
-      - taskboard/internal/store/postgres.go
     qa_verify_command: 'cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store'
     depends_on: []
     file_dependencies:
-      taskboard/internal/store/postgres.go:
-        - taskboard/internal/store/store.go
+      taskboard/internal/config/config.go: [taskboard/go.mod]
+      taskboard/internal/model/model.go: [taskboard/go.mod]
+      taskboard/internal/store/store.go: [taskboard/go.mod, taskboard/internal/model/model.go]
+      taskboard/internal/store/sqlite.go: [taskboard/go.mod, taskboard/internal/store/store.go]
 
   - id: phase-1-app
     title: PostgreSQL store and runnable project API
     spec_focus: PostgreSQL store and runnable project API
     required_files:
+      - taskboard/internal/store/postgres.go
       - taskboard/internal/store/store_test.go
       - taskboard/internal/store/postgres_integration_test.go
       - taskboard/cmd/taskboard/main.go
@@ -196,25 +259,15 @@ delivery_phases:
       - taskboard/web/templates/index.html
       - taskboard/internal/web/api_test.go
     qa_verify_command: 'cd taskboard && go test ./...'
-    depends_on:
-      - phase-1-core
+    depends_on: [phase-1-core]
     file_dependencies:
-      taskboard/internal/store/store_test.go:
-        - taskboard/internal/store/sqlite.go
-        - taskboard/internal/store/postgres.go
-      taskboard/internal/store/postgres_integration_test.go:
-        - taskboard/internal/store/postgres.go
-      taskboard/cmd/taskboard/main.go:
-        - taskboard/internal/web/app.go
-      taskboard/internal/web/app.go:
-        - taskboard/internal/store/store.go
-        - taskboard/web/assets.go
-      taskboard/internal/web/api.go:
-        - taskboard/internal/web/app.go
-      taskboard/web/assets.go:
-        - taskboard/web/templates/index.html
-      taskboard/internal/web/api_test.go:
-        - taskboard/internal/web/api.go
+      taskboard/internal/store/postgres.go: [taskboard/internal/store/store.go]
+      taskboard/internal/store/store_test.go: [taskboard/internal/store/sqlite.go]
+      taskboard/internal/store/postgres_integration_test.go: [taskboard/internal/store/postgres.go]
+      taskboard/internal/web/app.go: [taskboard/internal/store/store.go]
+      taskboard/internal/web/api.go: [taskboard/internal/web/app.go]
+      taskboard/web/assets.go: [taskboard/web/templates/index.html]
+      taskboard/cmd/taskboard/main.go: [taskboard/internal/config/config.go, taskboard/internal/store/sqlite.go, taskboard/internal/web/app.go]
 
   - id: phase-2-kanban
     title: Tasks, Kanban UI, and full Go tests
@@ -225,17 +278,12 @@ delivery_phases:
       - taskboard/internal/web/app_test.go
       - taskboard/internal/web/ui_content_test.go
     qa_verify_command: 'cd taskboard && go test ./...'
-    depends_on:
-      - phase-1-app
+    depends_on: [phase-1-app]
     file_dependencies:
-      taskboard/web/static/app.js:
-        - taskboard/web/assets.go
-      taskboard/web/static/style.css:
-        - taskboard/web/assets.go
-      taskboard/internal/web/app_test.go:
-        - taskboard/internal/web/app.go
-      taskboard/internal/web/ui_content_test.go:
-        - taskboard/internal/web/app.go
+      taskboard/web/static/app.js: [taskboard/web/assets.go]
+      taskboard/web/static/style.css: [taskboard/web/assets.go]
+      taskboard/internal/web/app_test.go: [taskboard/internal/web/app.go]
+      taskboard/internal/web/ui_content_test.go: [taskboard/web/assets.go]
 
   - id: phase-3-browser
     title: Playwright integration and browser QA
@@ -246,11 +294,11 @@ delivery_phases:
       - taskboard/playwright.config.ts
       - taskboard/playwright/taskboard.spec.ts
     qa_verify_command: 'cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright'
-    depends_on:
-      - phase-2-kanban
+    depends_on: [phase-2-kanban]
     file_dependencies:
-      taskboard/playwright/taskboard.spec.ts:
-        - taskboard/playwright.config.ts
+      taskboard/package-lock.json: [taskboard/package.json]
+      taskboard/playwright.config.ts: [taskboard/package.json]
+      taskboard/playwright/taskboard.spec.ts: [taskboard/playwright.config.ts]
 
   - id: phase-4-deploy
     title: Container build and k3s deployment artifacts
@@ -262,76 +310,14 @@ delivery_phases:
       - taskboard/deploy/k8s/service.yaml
       - taskboard/deploy/k8s/secret.example.yaml
     qa_verify_command: 'cd taskboard && go test ./... && docker build -t taskboard:local .'
-    depends_on:
-      - phase-3-browser
+    depends_on: [phase-3-browser]
     file_dependencies:
-      taskboard/Dockerfile:
-        - taskboard/cmd/taskboard/main.go
-      taskboard/deploy/k8s/deployment.yaml:
-        - taskboard/Dockerfile
+      taskboard/Dockerfile: [taskboard/cmd/taskboard/main.go, taskboard/web/assets.go]
+      taskboard/deploy/k8s/deployment.yaml: [taskboard/Dockerfile]
 
   - id: phase-5-release
     title: Final integration and release QA
     spec_focus: Final integration and release QA
     required_files: []
-    qa_verify_command: 'cd taskboard && go test ./...'
-    depends_on:
-      - phase-4-deploy
-    file_dependencies: {}
-```
-
-## Requirements
-
-### phase-1-core
-- Create project layout and Go module in `taskboard/go.mod` and `taskboard/go.sum`.
-- Create configuration parsing in `taskboard/internal/config/config.go` handling environment variables TASKBOARD_DB_DRIVER, TASKBOARD_DB_PATH, TASKBOARD_DATABASE_URL, TASKBOARD_HOST, and TASKBOARD_PORT.
-- Implement core domain models and unicode length validation rules in `taskboard/internal/model/model.go`.
-- Define shared Store repository interface and DDL constants in `taskboard/internal/store/store.go`.
-- Implement SQLite persistence with foreign keys PRAGMA and busy timeout in `taskboard/internal/store/sqlite.go`.
-- Implement PostgreSQL database engine in `taskboard/internal/store/postgres.go` with idempotent schema creation under transactional advisory lock (`pg_advisory_xact_lock`), `$1` placeholders, and identity primary keys.
-
-### phase-1-app
-- Implement unit tests for store contract in `taskboard/internal/store/store_test.go` and optional PostgreSQL integration tests in `taskboard/internal/store/postgres_integration_test.go`.
-- Construct web server setup in `taskboard/internal/web/app.go` and API handlers in `taskboard/internal/web/api.go`:
-  - `GET /api/health`: 200 `{"status":"ok"}`
-  - `GET /api/ready`: 200 `{"status":"ready"}` or 503 `{"error":"database unavailable"}`
-  - `GET /api/projects`: 200 array ordered by ascending ID; empty lists serialize as `[]`
-  - `POST /api/projects`: 201 project JSON; 400 on blank or overlong name
-  - `DELETE /api/projects/{project_id}`: 204 empty body; 404 if missing
-  - `GET /api/projects/{project_id}/tasks`: 200 array ordered by ID; supports combined `status` and `priority` AND filters; 404 if project missing; 400 on invalid filter enum
-  - `POST /api/projects/{project_id}/tasks`: 201 task JSON; 404 if project missing; 400 on invalid fields
-  - `PATCH /api/tasks/{task_id}`: 200 updated task JSON; 400 on empty or explicit-null PATCH fields or invalid enums; 404 if missing
-  - `DELETE /api/tasks/{task_id}`: 204 empty body; 404 if missing
-- Implement embed directive in `taskboard/web/assets.go` embedding `taskboard/web/templates/*`.
-- Provide HTML layout structure in `taskboard/web/templates/index.html`.
-- Create main entrypoint in `taskboard/cmd/taskboard/main.go` loading config, selecting dialect with no silent SQLite fallback on PostgreSQL failure, listening on `TASKBOARD_HOST:TASKBOARD_PORT`, and handling SIGTERM for graceful shutdown.
-- Add API project integration tests in `taskboard/internal/web/api_test.go` asserting status codes, JSON response formats, error messages `{"error":"..."}`, and empty list serialization as `[]`.
-
-### phase-2-kanban
-- Implement client-side vanilla JavaScript in `taskboard/web/static/app.js` handling project creation/selection, task CRUD, status transitions (todo -> doing -> done), and filters.
-- Implement CSS stylesheet in `taskboard/web/static/style.css` for Kanban columns and cards.
-- Extend `taskboard/web/assets.go` to embed `taskboard/web/static/*` assets.
-- Add Go web router integration tests in `taskboard/internal/web/app_test.go` and UI template assertions in `taskboard/internal/web/ui_content_test.go`.
-
-### phase-3-browser
-- Configure Playwright dependencies in `taskboard/package.json` and `taskboard/package-lock.json`.
-- Add test configuration in `taskboard/playwright.config.ts`.
-- Implement E2E browser test suite in `taskboard/playwright/taskboard.spec.ts` testing project creation, task movement, priority filtering, and task deletion.
-
-### phase-4-deploy
-- Write multi-stage Dockerfile in `taskboard/Dockerfile` building non-root binary.
-- Add build exclusions in `taskboard/.dockerignore`.
-- Create Kubernetes deployment manifest in `taskboard/deploy/k8s/deployment.yaml` with liveness/readiness probes and Secret references.
-- Create Kubernetes service manifest in `taskboard/deploy/k8s/service.yaml`.
-- Create Kubernetes secret example manifest in `taskboard/deploy/k8s/secret.example.yaml`.
-
-### phase-5-release
-- Execute full integration regression suite.
-- Verify clean checkout build, test coverage, and documentation completeness across both SQLite and PostgreSQL configurations.
-
-## Acceptance mapping
-- Multi-tenant/multi-project task tracking: satisfied by `taskboard/internal/model/model.go` and `taskboard/internal/store/store.go`.
-- Dual database support (SQLite + PostgreSQL): satisfied by `taskboard/internal/store/sqlite.go` and `taskboard/internal/store/postgres.go`.
-- Embedded assets & web application: satisfied by `taskboard/web/assets.go`, `taskboard/internal/web/app.go`, `taskboard/web/templates/index.html`, `taskboard/web/static/app.js`, and `taskboard/web/static/style.css`.
-- E2E Playwright verification: satisfied by `taskboard/playwright/taskboard.spec.ts`.
-- Docker & Kubernetes deployability: satisfied by `taskboard/Dockerfile`, `taskboard/deploy/k8s/deployment.yaml`, `taskboard/deploy/k8s/service.yaml`, and `taskboard/deploy/k8s/secret.example.yaml`.
+    qa_verify_command: 'cd taskboard && go test ./... && docker build -t taskboard:local .'
+    depends_on: [phase-4-deploy]
