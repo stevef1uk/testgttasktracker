@@ -1,80 +1,80 @@
-# Implementation plan
+# Implementation plan: phase-3-browser (Playwright integration and browser QA)
 
-Active phase: phase-3-browser (Playwright integration and browser QA).
-Required files: taskboard/package.json, taskboard/package-lock.json, taskboard/playwright.config.ts, taskboard/playwright/taskboard.spec.ts.
-Phase verify: cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright
-Precondition: the TaskBoard server is already running on 127.0.0.1:8080 (or BASE_URL). Node dependencies are provisioned from taskboard/package-lock.json by an operator or environment step before test review; the polecat and planner do not install them.
+## Scope
+
+Active phase `phase-3-browser` depends on `phase-2-kanban`. It owns exactly four first-delivery files:
+`taskboard/package.json`, `taskboard/package-lock.json`, `taskboard/playwright.config.ts`, `taskboard/playwright/taskboard.spec.ts`.
+Phase 1 and 2 files are read-only for this phase. Playwright drives the already-built UI served by the running Go app on `127.0.0.1:8080`. Deploy and release phases are out of scope.
+
+Phase verification (exact, from architecture `qa_verify_command`):
+`cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`
+
+The Go server must already be running before the browser step. Dependency installation is not part of this plan's verify lines.
 
 ## Bead map
 
 ### ta-o19: taskboard/package.json
-- Scope: E2E devDependency and test script for the Playwright suite under taskboard/. No runtime dependencies, no frontend build step.
-- Architecture: declares @playwright/test pinned to exactly 1.62.1 in devDependencies; the test script runs Playwright on the chromium project.
+- Scope: npm manifest declaring `@playwright/test` as the only devDependency, plus a `test` script that runs the Playwright suite. No frontend build scripts, bundler, or framework.
+- Architecture: phase-3 required file; owns E2E test dependencies and npm scripts (architecture, Module / bead ownership table).
 - Interfaces: none (manifest only).
-- Depends on: none.
-- Consumed by: taskboard/package-lock.json (ta-qu7), taskboard/playwright.config.ts (ta-ff9), taskboard/playwright/taskboard.spec.ts (ta-l7z).
-- Status: closed; content already validated. Do not recreate.
+- Depends on: `<none>`.
+- Consumed by: `taskboard/package-lock.json`, `taskboard/playwright.config.ts`, `taskboard/playwright/taskboard.spec.ts`.
 - Acceptance:
-  - Parses as JSON and lists @playwright/test at exactly 1.62.1 under devDependencies.
-  - A test script exists and runs Playwright on the chromium project.
-  - No dependencies beyond @playwright/test.
-- Verify: cd taskboard && node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
+  - `devDependencies` contains `@playwright/test`; `dependencies` is empty or absent.
+  - No build step, bundler, or framework is introduced (SPEC §2, §7).
+  - Package name is `playwright-tests` and version is `1.0.0`, matching the cached content.
+- Verify: phase gate `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`.
 
 ### ta-qu7: taskboard/package-lock.json
-- Scope: lockfile matching taskboard/package.json so provisioning reproduces the Playwright install exactly.
-- Architecture: pins the same @playwright/test 1.62.1 declared in package.json; lockfileVersion 3.
-- Interfaces: none (lockfile only).
-- Depends on: taskboard/package.json (ta-o19).
-- Consumed by: the Playwright verify step, which needs taskboard/node_modules/.bin/playwright provisioned from this lockfile.
-- Status: closed. Do not recreate.
+- Scope: committed lockfile matching `taskboard/package.json`. Lockfile version 3.
+- Architecture: required lockfile (SPEC §3: go.sum and package-lock.json must be committed).
+- Interfaces: none.
+- Depends on: `taskboard/package.json`.
+- Consumed by: Playwright runs in `taskboard/playwright.config.ts` and `taskboard/playwright/taskboard.spec.ts`.
 - Acceptance:
-  - lockfileVersion is 3; root package name and devDependencies match package.json.
-  - Provisioning under taskboard/ yields node_modules/.bin/playwright without modifying the lockfile.
-  - No packages are present that package.json does not declare.
-- Verify: cd taskboard && ./node_modules/.bin/playwright --version
+  - Lockfile pins `@playwright/test` at the version in `taskboard/package.json`.
+  - Root package entry name and version match `taskboard/package.json`.
+  - No `node_modules` or generated reports are committed.
+- Verify: covered by the phase gate above.
 
 ### ta-ff9: taskboard/playwright.config.ts
-- Scope: Playwright configuration. testDir ./playwright, per-test timeout 10000 ms, one chromium project using Desktop Chrome.
-- Architecture: use.baseURL defaults to http://127.0.0.1:8080 and is overridable via BASE_URL. Chromium launch args disable HTTPS-upgrade features and pass --ignore-certificate-errors for local runs.
-- Interfaces: default export from defineConfig with testDir, timeout, use.baseURL, and projects (exactly one project named chromium).
-- Depends on: taskboard/package.json (ta-o19) for @playwright/test; taskboard/package-lock.json (ta-qu7) for the installed binary.
-- Consumed by: taskboard/playwright/taskboard.spec.ts (ta-l7z) through the Playwright runner.
-- Status: open (in progress). Previous attempt was rejected because the content was valid but the binary was not provisioned; close only after the verify command passes.
+- Scope: Playwright configuration with `testDir` set to `./playwright`, base URL `http://127.0.0.1:8080` (overridable by `BASE_URL`), and a single Chromium project using the Desktop Chrome device profile.
+- Architecture: phase-3 required file; config for `playwright/taskboard.spec.ts` (architecture, phase-3-browser).
+- Interfaces: default export of `defineConfig({...})` from `@playwright/test`.
+- Depends on: `taskboard/package.json`.
+- Consumed by: `taskboard/playwright/taskboard.spec.ts` (through the runner).
 - Acceptance:
-  - BASE_URL overrides use.baseURL; without it the base URL is http://127.0.0.1:8080.
-  - forbidOnly is true when CI is set; workers is 1 when CI is set.
-  - Reporters are html (open: never) and list.
-  - Exactly one project, named chromium.
-- Verify: cd taskboard && ./node_modules/.bin/playwright test --config playwright.config.ts --list
+  - `testDir` resolves to `playwright/` so the spec file is discovered by the verify command.
+  - Base URL targets the host-accessible server; no second application container is started (SPEC §8).
+  - Retries stay at 0 so failures are not hidden; config does not use `test.skip` or `test.fixme` to pass.
+  - Reporter writes no artifacts into the committed tree (no `playwright-report` checked in).
+- Verify: covered by the phase gate above.
 
 ### ta-l7z: taskboard/playwright/taskboard.spec.ts
-- Scope: browser E2E scenarios for the TaskBoard UI (SPEC §8 Playwright section), run against the live app on the configured base URL. Replaces the current smoke-only content.
-- Architecture: flows are load the home page; create project and task through browser controls; move a task To Do to Doing to Done with Move forward; delete a task; create two tasks with different priorities and filter by high; edit a task; delete a project after confirm.
-- Interfaces: Playwright test blocks only; no exported symbols.
-- Depends on: taskboard/playwright.config.ts (ta-ff9), taskboard/package.json (ta-o19).
-- Consumed by: the test script in taskboard/package.json and the Playwright verify step.
-- Status: open.
-- Acceptance:
-  - Initial page shows the TaskBoard heading and the three columns To Do, Doing, Done.
-  - Create a project and a task using the real form controls; the task title appears in the To Do column.
-  - Click Move forward: the card moves to Doing, then Done; on Done the Move forward control is hidden or disabled. Each step asserts the card's column in the DOM.
-  - Delete the task through its Delete control; the title is no longer in the DOM.
-  - Create two tasks with priorities high and low; select priority filter high; only the high task title is visible; reset to all; both are visible.
-  - Status filter: with tasks in todo and doing, selecting doing shows only the doing task title.
-  - Edit a task title through Edit controls; the new title is visible after save.
-  - Delete a project with window.confirm accepted; it disappears from the project selector.
-  - Every test uses a unique project name (timestamp suffix) and removes the projects it created in afterEach, so tests do not depend on execution order or earlier runs.
-  - Passes with ./node_modules/.bin/playwright test --config playwright.config.ts playwright against a running app.
-- Verify: cd taskboard && ./node_modules/.bin/playwright test --config playwright.config.ts playwright
+- Scope: browser E2E tests driven by real clicks, typing, and select changes against the running app.
+- Architecture: phase-3 required file; E2E / integration testing section lists these flows.
+- Interfaces: uses `test`, `expect` from `@playwright/test`; no exported symbols.
+- Depends on: `taskboard/playwright.config.ts`, `taskboard/package.json`, and the running Go app served from phase-2 files.
+- Consumed by: phase verify command.
+- Acceptance (SPEC §8 Playwright E2E, each asserting DOM or `/api` state):
+  1. Initial page shows the `TaskBoard` heading and the three columns `To Do`, `Doing`, `Done`.
+  2. Create a uniquely named project and a task through the UI; the card appears in `To Do`. Click `Move forward` to reach `Doing`, then `Done`; the forward control is hidden or disabled at `done`. Delete the task and assert it is gone.
+  3. Create two tasks with different priorities, set the priority filter to `high`, assert only the high-priority card renders, reset to `all`, and assert both cards return.
+  4. At least one test performs real input, click, and select actions and asserts the resulting DOM or `/api` state change. Static-only checks are insufficient.
+  5. Each test uses a unique project name and deletes the projects it created, so it does not depend on prior runs.
+- Verify: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`.
 
-## Dependency order
-1. ta-o19 (taskboard/package.json), closed
-2. ta-qu7 (taskboard/package-lock.json), closed; provisioning from the lockfile
-3. ta-ff9 (taskboard/playwright.config.ts), open
-4. ta-l7z (taskboard/playwright/taskboard.spec.ts), open
+## Dependencies and ordering
 
-## Blocker to resolve before verify
-- ta-ff9 and ta-l7z cannot be verified until taskboard/node_modules/.bin/playwright exists. That binary must be provisioned from the locked lockfile by an environment or operator step, which is outside polecat and planner scope.
+1. `ta-o19` (package.json) before `ta-qu7` (lockfile generated from the manifest).
+2. `ta-o19` and `ta-ff9` before `ta-l7z` (the spec imports `@playwright/test` and relies on the config).
+3. All four before the phase verify command runs.
+
+## Bead status note
+
+`ta-o19` and `ta-qu7` are closed and their files exist, so they are not reopened. `ta-ff9` is in progress. `ta-l7z` is the only open implement bead. No duplicates were created.
 
 ## Future considerations
-- Backend Go unit and integration tests belong to earlier phases and are not part of this plan.
+
+- Phase 4 Dockerfile and k3s manifests are not planned here.
+- PostgreSQL E2E coverage is not in this phase; `TASKBOARD_TEST_POSTGRES_URL` is handled by Go tests.
