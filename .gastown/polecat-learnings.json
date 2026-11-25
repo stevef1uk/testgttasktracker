@@ -3,13 +3,6 @@
   "entries": [
     {
       "stack": "go",
-      "rule": "Test review lesson: Repair implementation beads: ta-zmd",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-24T18:24:00Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in sqlite.go: vet: internal/store/sqlite.go:95:72: undefined: model",
       "source": "verify_fix",
       "bead_path": "taskboard/internal/store/sqlite.go",
@@ -59,6 +52,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-24T22:02:53Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-qb9",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-25T05:26:27Z"
     }
   ]
 }
