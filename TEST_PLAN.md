@@ -34,7 +34,7 @@ Assertions:
 Requirement: SQLite store contract: idempotent schema creation, foreign keys enforced on every pooled connection, 5000 ms busy timeout, project and task CRUD, ascending ID order, status/priority filters combined with AND, partial PATCH, project delete cascades to tasks, persistence across close and reopen.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: ta-nw9
+Bead ID: ta-82r
 Phase: phase-1-app
 Scenarios:
 - Fresh file schema is empty; second init on the same file keeps existing rows and runs no DROP or reset.
