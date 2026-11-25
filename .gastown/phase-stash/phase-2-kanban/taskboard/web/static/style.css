@@ -1,161 +1,44 @@
-/* TaskBoard styles: layout for header, projects/tasks panels, forms, filters, and lists. */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
 body {
+  font-family: system-ui, sans-serif;
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 15px;
-  line-height: 1.4;
+  padding: 1rem 2rem;
   color: #1f2933;
-  background: #f4f6f8;
+  background: #f5f7fa;
 }
 
-header {
-  background: #1f3a5f;
-  color: #ffffff;
-  padding: 16px 24px;
-}
-
-header h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-main {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
-  gap: 20px;
-  padding: 20px 24px;
-  align-items: start;
-}
-
-section {
-  background: #ffffff;
-  border: 1px solid #d9e0e7;
-  border-radius: 8px;
-  padding: 16px;
-  min-width: 0;
-}
-
-section h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
+h1 {
+  font-size: 1.5rem;
+  margin-top: 0;
 }
 
 form {
   display: flex;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-  margin-bottom: 14px;
+  margin-bottom: 1rem;
 }
 
-input[type="text"],
+input,
+select,
 textarea,
-select {
+button {
   font: inherit;
-  padding: 6px 8px;
-  border: 1px solid #aab7c4;
-  border-radius: 4px;
-  background: #ffffff;
-  color: inherit;
-}
-
-input[type="text"]:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 1px;
-}
-
-#project-name,
-#task-title {
-  flex: 1 1 180px;
-  min-width: 0;
-}
-
-#task-description {
-  flex: 1 1 100%;
-  min-height: 60px;
-  resize: vertical;
-}
-
-#task-status,
-#task-priority {
-  flex: 0 0 auto;
+  padding: 0.35rem 0.6rem;
 }
 
 button {
-  font: inherit;
-  padding: 6px 14px;
-  border: 1px solid #1f3a5f;
-  border-radius: 4px;
-  background: #1f3a5f;
-  color: #ffffff;
   cursor: pointer;
 }
 
-button:hover {
-  background: #274b7a;
-}
-
-button:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-#status-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-#project-list,
-#task-list {
+ul {
   list-style: none;
-  margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
-#project-list li,
-#task-list li {
-  padding: 10px 12px;
-  border: 1px solid #e3e8ee;
-  border-radius: 6px;
-  background: #fbfcfd;
-  overflow-wrap: anywhere;
-}
-
-#task-list li[data-priority="high"] {
-  border-left: 4px solid #d64545;
-}
-
-#task-list li[data-priority="medium"] {
-  border-left: 4px solid #e0a100;
-}
-
-#task-list li[data-priority="low"] {
-  border-left: 4px solid #3c9d5d;
-}
-
-#task-list li[data-status="done"] {
-  opacity: 0.7;
-}
-
-@media (max-width: 800px) {
-  main {
-    grid-template-columns: 1fr;
-    padding: 12px;
-  }
+li {
+  background: #fff;
+  border: 1px solid #d9e2ec;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
 }
