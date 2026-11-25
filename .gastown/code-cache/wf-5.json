@@ -110,5 +110,37 @@
     "validated_at": "2026-11-25T09:36:59Z",
     "created_at": "2026-11-25T09:36:59Z",
     "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
+  },
+  "3:taskboard/package-lock.json": {
+    "content": "{\n  \"name\": \"playwright-tests\",\n  \"version\": \"1.0.0\",\n  \"lockfileVersion\": 3,\n  \"requires\": true,\n  \"packages\": {\n    \"\": {\n      \"name\": \"playwright-tests\",\n      \"version\": \"1.0.0\",\n      \"devDependencies\": {\n        \"@playwright/test\": \"1.62.1\"\n      }\n    },\n    \"node_modules/@playwright/test\": {\n      \"version\": \"1.62.1\",\n      \"resolved\": \"https://registry.npmjs.org/@playwright/test/-/test-1.62.1.tgz\",\n      \"integrity\": \"sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==\",\n      \"dev\": true,\n      \"license\": \"Apache-2.0\",\n      \"dependencies\": {\n        \"playwright\": \"1.62.1\"\n      },\n      \"bin\": {\n        \"playwright\": \"cli.js\"\n      },\n      \"engines\": {\n        \"node\": \"\u003e=20\"\n      }\n    },\n    \"node_modules/fsevents\": {\n      \"version\": \"2.3.2\",\n      \"resolved\": \"https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz\",\n      \"integrity\": \"sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==\",\n      \"dev\": true,\n      \"hasInstallScript\": true,\n      \"license\": \"MIT\",\n      \"optional\": true,\n      \"os\": [\n        \"darwin\"\n      ],\n      \"engines\": {\n        \"node\": \"^8.16.0 || ^10.6.0 || \u003e=11.0.0\"\n      }\n    },\n    \"node_modules/playwright\": {\n      \"version\": \"1.62.1\",\n      \"resolved\": \"https://registry.npmjs.org/playwright/-/playwright-1.62.1.tgz\",\n      \"integrity\": \"sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==\",\n      \"dev\": true,\n      \"license\": \"Apache-2.0\",\n      \"dependencies\": {\n        \"playwright-core\": \"1.62.1\"\n      },\n      \"bin\": {\n        \"playwright\": \"cli.js\"\n      },\n      \"engines\": {\n        \"node\": \"\u003e=20\"\n      },\n      \"optionalDependencies\": {\n        \"fsevents\": \"2.3.2\"\n      }\n    },\n    \"node_modules/playwright-core\": {\n      \"version\": \"1.62.1\",\n      \"resolved\": \"https://registry.npmjs.org/playwright-core/-/playwright-core-1.62.1.tgz\",\n      \"integrity\": \"sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==\",\n      \"dev\": true,\n      \"license\": \"Apache-2.0\",\n      \"bin\": {\n        \"playwright-core\": \"cli.js\"\n      },\n      \"engines\": {\n        \"node\": \"\u003e=20\"\n      }\n    }\n  }\n}\n",
+    "md5": "7c93b21a374091d34d89886341b11ace",
+    "validated": true,
+    "validated_at": "2026-11-25T09:41:03Z",
+    "created_at": "2026-11-25T09:41:03Z",
+    "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
+  },
+  "3:taskboard/package.json": {
+    "content": "{\n  \"name\": \"playwright-tests\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Playwright E2E tests\",\n  \"scripts\": {\n    \"test\": \"npx playwright test --project=chromium\"\n  },\n  \"devDependencies\": {\n    \"@playwright/test\": \"1.62.1\"\n  }\n}\n",
+    "md5": "e30a1da4a947e9ac00e1af486b7236fb",
+    "validated": true,
+    "validated_at": "2026-11-25T09:41:03Z",
+    "created_at": "2026-11-25T09:41:03Z",
+    "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
+  },
+  "3:taskboard/playwright.config.ts": {
+    "content": "import { defineConfig, devices } from '@playwright/test';\n\nexport default defineConfig({\n  testDir: './playwright',\n  timeout: 10000,\n  fullyParallel: true,\n  forbidOnly: !!process.env.CI,\n  retries: 0,\n  workers: process.env.CI ? 1 : undefined,\n  reporter: [['html', { open: 'never' }], ['list']],\n  use: {\n    baseURL: process.env.BASE_URL || 'http://127.0.0.1:8080',\n    trace: 'on-first-retry',\n  },\n  webServer: {\n    command: 'go run ./cmd/taskboard',\n    url: 'http://127.0.0.1:8080/',\n    reuseExistingServer: !process.env.CI,\n    timeout: 120000,\n  },\n  projects: [\n    {\n      name: 'chromium',\n      use: {\n        ...devices['Desktop Chrome'],\n        launchOptions: {\n          args: [\n            '--disable-features=HttpsUpgrades,HttpsFirstModeV2,AutomaticHttpsDefault,AutomaticHttpsDefaultEnabled,HttpsOnlyMode',\n            '--ignore-certificate-errors',\n          ],\n        },\n      },\n    },\n  ],\n});",
+    "md5": "3cf6d3180ad76adf87c9bb48f4980eee",
+    "validated": true,
+    "validated_at": "2026-11-25T09:41:03Z",
+    "created_at": "2026-11-25T09:41:03Z",
+    "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
+  },
+  "3:taskboard/playwright/taskboard.spec.ts": {
+    "content": "import { test, expect } from '@playwright/test';\n\ntest.describe('taskboard smoke', () =\u003e {\n  test('root page responds with HTML', async ({ request }) =\u003e {\n    const res = await request.get('/');\n    expect(res.ok()).toBeTruthy();\n    expect(res.headers()['content-type']).toContain('text/html');\n  });\n});\n\ntest.describe('taskboard projects', () =\u003e {\n  test('creating a project from the form lists it in the project list', async ({ page }) =\u003e {\n    const name = `e2e-project-${Date.now()}`;\n\n    await page.goto('/');\n    await expect(page.locator('#projects-panel')).toBeVisible();\n\n    await page.locator('#project-name').fill(name);\n    await page.locator('#project-create').click();\n\n    await expect(page.locator('#project-list')).toContainText(name);\n  });\n});",
+    "md5": "fc7dc0799ae6ca30bcafcf26293ef199",
+    "validated": true,
+    "validated_at": "2026-11-25T09:41:03Z",
+    "created_at": "2026-11-25T09:41:03Z",
+    "design_fingerprint": "5b4ad3b4ba0f7e3b5a17530f33b6a7e8"
   }
 }
