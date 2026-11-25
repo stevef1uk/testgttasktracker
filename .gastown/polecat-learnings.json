@@ -10,13 +10,6 @@
     },
     {
       "stack": "go",
-      "rule": "Test review lesson: Auto-routed to Polecat for test repair: Phase verify is green (go mod verify ok; config, model, store tests pass)",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-24T22:00:52Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: task execution error: no structured outcome after 20 turns",
       "source": "qa_rework",
       "hits": 1,
@@ -57,6 +50,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-25T07:10:58Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: {\"summary\":\"Stage 1/2: index.html is a static template with no client-side behavior — it defines forms and lists but no fetc...",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-25T07:26:48Z"
     }
   ]
 }
