@@ -67,7 +67,7 @@ go run ./cmd/taskboard
 | `taskboard/internal/store/store.go` | Store interface, ErrNotFound and repository error constants, DDL schema constants | HTTP routing logic |
 | `taskboard/internal/store/sqlite.go` | SQLiteStore struct, NewSQLiteStore function | Postgres SQL dialect syntax |
 | `taskboard/internal/store/postgres.go` | PostgresStore struct, NewPostgresStore function | SQLite PRAGMA commands |
-| `taskboard/internal/store/store_test.go` | SQLite in-memory integration and unit tests for Store | Postgres integration tests |
+| `taskboard/internal/store/store_test.go` | SQLite integration and unit tests for Store using isolated t.TempDir() database files (never the runtime taskboard.db) | Postgres integration tests |
 | `taskboard/internal/store/postgres_integration_test.go` | Postgres integration tests using container or DSN | SQLite-specific tests |
 | `taskboard/web/assets.go` | Embedded FS assets (FS) | Handlers or DB connections |
 | `taskboard/web/templates/index.html` | UI Kanban HTML template | Dynamic JS behavior |
@@ -93,7 +93,7 @@ go run ./cmd/taskboard
 
 ### HTTP Routes
 - The home page at the root path renders the embedded template with the projects list and main board (SPEC §7).
-- `GET /static/app.js` serves the embedded JavaScript asset. The embedded stylesheet `taskboard/web/static/style.css` is served by the same static asset handler with a CSS content type (SPEC §7).
+- `GET /static/app.js` serves the embedded JavaScript asset; the `/static/` prefix file server (SPEC §7) serves the embedded stylesheet `taskboard/web/static/style.css` with a CSS content type.
 - GET /api/health — Lightweight health check returning status ok JSON.
 - GET /api/ready — Database readiness check returning status ready JSON when database ping succeeds or 503 error database unavailable.
 - GET /api/projects — List all projects ordered by ID ascending.
@@ -130,6 +130,7 @@ go run ./cmd/taskboard
   - Stage 1 (Builder): golang:1.25-alpine - compiles binary `CGO_ENABLED=0 GOOS=linux go build -o /app/taskboard ./cmd/taskboard`.
   - Stage 2 (Final): alpine:3.20 - non-root user execution, copying compiled `/app/taskboard`.
   - Exposed Port: EXPOSE 8080
+  - Runtime contract: TASKBOARD_HOST=0.0.0.0 in the container; CA certificates installed; non-root numeric UID; embedded HTML, JS and CSS; no Go toolchain or Node runtime in the final image; build context is taskboard/ with .dockerignore excluding databases, secrets, .git, node_modules, test reports and build outputs; supports linux/amd64 and linux/arm64 builds.
   - Command: `CMD ["/app/taskboard"]`
 - Kubernetes Deployment (`taskboard/deploy/k8s/deployment.yaml`):
   - Target port 8080.
@@ -225,8 +226,12 @@ delivery_phases:
       - phase-1-app
     file_dependencies:
       taskboard/internal/web/app_test.go:
+        - taskboard/web/static/app.js
+        - taskboard/web/static/style.css
         - taskboard/internal/web/app.go
       taskboard/internal/web/ui_content_test.go:
+        - taskboard/web/static/app.js
+        - taskboard/web/static/style.css
         - taskboard/web/assets.go
 
   - id: phase-3-browser
@@ -290,12 +295,14 @@ delivery_phases:
 - Implement PostgreSQL driver with advisory locking in `taskboard/internal/store/postgres.go`.
 - Implement web router and HTTP API in `taskboard/internal/web/app.go` and `taskboard/internal/web/api.go`.
 - Embed HTML templates in `taskboard/web/assets.go` and skeleton HTML in `taskboard/web/templates/index.html`.
+- Phase-1 static boundary: `taskboard/web/assets.go` uses only the directive `//go:embed templates/*`; `taskboard/web/templates/index.html` is a skeleton shell with no `/static/` script or stylesheet references; `taskboard/internal/web/app.go` registers no static file route in phase-1-app. Static files `taskboard/web/static/app.js` and `taskboard/web/static/style.css` remain phase-2-kanban owned and are not prerequisites of phase-1-app.
 - Wire process startup and shutdown in `taskboard/cmd/taskboard/main.go`.
 - Add backend store and API unit tests in `taskboard/internal/store/store_test.go`, `taskboard/internal/store/postgres_integration_test.go`, and `taskboard/internal/web/api_test.go`.
 
 ### phase-2-kanban
 - Build interactive frontend client logic in `taskboard/web/static/app.js` and CSS styling in `taskboard/web/static/style.css`.
 - Add web server unit tests in `taskboard/internal/web/app_test.go` and asset content tests in `taskboard/internal/web/ui_content_test.go`.
+- Extend `taskboard/web/templates/index.html` in place (first owned by phase-1-app) to reference `/static/style.css` and `/static/app.js`; extend `taskboard/web/assets.go` to the directive `//go:embed templates/* static/*`; enable the `/static/` file server in `taskboard/internal/web/app.go`. These phase-2-kanban changes satisfy the static-file dependency that phase-1-app no longer carries.
 
 ### phase-3-browser
 - Configure Playwright in `taskboard/playwright.config.ts` and `taskboard/package.json`.
