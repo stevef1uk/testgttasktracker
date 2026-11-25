@@ -66,7 +66,7 @@ Assertions:
 Requirement: Task REST API (list, create, patch, delete) with server-owned status, IDs, and timestamps, nonempty PATCH, explicit-null rejection, and AND-combined filters.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: pending (phase-2-kanban bead not yet created; Planner to assign)
+Bead ID: ta-88r
 Phase: phase-2-kanban
 Scenarios:
 - Task create defaults status todo and priority medium; client-supplied status, id, and timestamps are ignored.
@@ -84,7 +84,7 @@ Assertions:
 Requirement: Browser E2E: real clicks, typing, and selections drive the UI; project and task creation, Move forward from To Do to Doing to Done, delete, and priority filter reset are asserted via DOM and API state.
 Level: ui
 Test file: taskboard/playwright/taskboard.spec.ts
-Bead ID: pending (phase-3-browser bead not yet created; Planner to assign)
+Bead ID: ta-xmb
 Phase: phase-3-browser
 Scenarios:
 - Create a uniquely named project and task through the UI; card appears in To Do.
