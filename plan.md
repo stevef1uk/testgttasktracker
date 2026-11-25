@@ -1,92 +1,59 @@
-# Implementation plan: phase-4-deploy (Container build and k3s deployment artifacts)
+# Implementation plan (phase-4-deploy)
 
-Active phase: `phase-4-deploy`. Depends on `phase-3-browser`. This plan covers only the five first-delivery files below. Phase `phase-5-release` owns no first-delivery files.
-
-Phase verification: `cd taskboard && go test ./... && docker build -t taskboard:local .`
-
-## Rework amendment (from failed implementation review)
-
-The previous implementation left `taskboard/Dockerfile` as the stale template from the rig root. It still has `FROM golang:1.22-alpine`, builds `./cmd/server`, copies `/server`, and copies `web/`. That fails `go mod download` with `go.mod requires go >= 1.26.1 (running go 1.22.12; GOTOOLCHAIN=local)`.
-
-The Dockerfile bead must fully replace that file. Do not patch it line by line. The replacement must:
-- Use `FROM golang:1.26-alpine AS builder` (or a newer pinned 1.26+ tag or digest). Architecture's `golang:1.25-alpine` is superseded because `taskboard/go.mod` declares `go 1.26.1`.
-- Build `./cmd/taskboard` into `/app/taskboard`, not `./cmd/server` and not `/server`.
-- Use `CMD ["/app/taskboard"]` and `EXPOSE 8080`, with `ENV TASKBOARD_HOST=0.0.0.0`.
-- Run as a non-root numeric UID in the alpine:3.20 runtime stage.
-
-Do not lower `go.mod`. SPEC §2 requires Go >= 1.25, so a 1.26 builder satisfies it.
-
-The cached `deployment.yaml` also needs amendment. Its probes use `/` and its env var is `DATABASE_URL`. Architecture requires probes on `/api/health` (liveness) and `/api/ready` (readiness), and env `TASKBOARD_DB_DRIVER` plus `TASKBOARD_DATABASE_URL` from Secret key `database-url`. The polecat must follow architecture, not the cached content.
+Dependency order (earliest first): ta-0x5, ta-2ok, ta-uns, ta-om9, ta-cp8.
 
 ## Bead map
 
-### ta-uns: taskboard/Dockerfile
-- Scope: Replace the entire `taskboard/Dockerfile` with a multi-stage production image for the TaskBoard binary. The build context is `taskboard/`.
-- Architecture: Docker & Deployment section. Builder runs `CGO_ENABLED=0 GOOS=linux go build -o /app/taskboard ./cmd/taskboard`. Runtime is alpine:3.20 with ca-certificates, a non-root numeric UID, and `/app/taskboard`.
-- Builder image: `golang:1.26-alpine` or newer, pinned. Keep the Go version at least the `go` directive in `taskboard/go.mod` (currently 1.26.1).
-- Interfaces: `CMD ["/app/taskboard"]`; `EXPOSE 8080`; `ENV TASKBOARD_HOST=0.0.0.0`.
-- Depends on: taskboard/go.mod, taskboard/go.sum, taskboard/cmd/taskboard/main.go, taskboard/internal/web/app.go, taskboard/internal/web/api.go, taskboard/web/assets.go, taskboard/web/templates/index.html, taskboard/web/static/app.js, taskboard/web/static/style.css
-- Consumed by: <none>
-- Acceptance:
-  - The file contains no `golang:1.22`, no `./cmd/server`, and no `/server` path.
-  - `go mod download` in the builder stage succeeds with `GOTOOLCHAIN=local`.
-  - `docker build -t taskboard:local .` run from `taskboard/` exits 0.
-  - The final image has no Go toolchain and no Node runtime.
-  - The final image runs as a non-root numeric UID.
-  - Embedded HTML, JS, and CSS are inside the binary, so no runtime file copy is needed.
-  - No database files, `node_modules`, or secrets are copied into the image.
-- Verify: `cd taskboard && go test ./... && docker build -t taskboard:local .`. If Docker is unavailable, report the build as not run.
+### ta-0x5: taskboard/deploy/k8s/secret.example.yaml
+- Scope: Example-only Secret carrying DATABASE_URL, never applied as-is.
+- Architecture: architecture.md, Kubernetes secret example (phase-4-deploy).
+- Interfaces: Secret `taskboard-db`, key `database-url`, placeholder values only (CHANGE_ME_*).
+- Depends on: <none>.
+- Consumed by: taskboard/deploy/k8s/deployment.yaml (ta-om9) via Secret name and key.
+- Acceptance: file header warns it must not be applied unchanged and must not hold real credentials.
+- Acceptance: contains only placeholder credentials; no real host, user or password.
+- Verify: kubectl apply --dry-run=client -f taskboard/deploy/k8s/secret.example.yaml (YAML must parse).
 
 ### ta-2ok: taskboard/.dockerignore
-- Scope: Build-context exclusions for the Docker build rooted at `taskboard/`.
-- Architecture: Excludes databases, secrets, `.git`, node_modules, test reports, and build outputs.
-- Interfaces: None (exclusion patterns only).
-- Depends on: <none>
-- Consumed by: <none> (Docker reads it as build context; there is no repo-file import edge)
-- Acceptance:
-  - Excludes `*.db`, `taskboard.db`, `.git`, `node_modules`, `playwright-report`, `test-results`, build outputs, and `.env` or secret files.
-  - Does not exclude `cmd/`, `internal/`, `web/`, `go.mod`, or `go.sum`.
-  - `docker build` still sends the Go sources and the embedded web assets.
-- Verify: `cd taskboard && docker build -t taskboard:local .` succeeds with the exclusions in place.
+- Scope: Build context exclusions for Docker.
+- Architecture: architecture.md, build context exclusions.
+- Interfaces: none (exclusion file only).
+- Depends on: <none>.
+- Consumed by: taskboard/Dockerfile (ta-uns).
+- Acceptance: excludes .git, node_modules, test reports, build outputs, databases, secrets (.env, *.pem, *.key) and deploy/ manifests.
+- Acceptance: does not exclude go.mod, go.sum, cmd/, internal/ or web/ sources needed by the build.
+- Verify: cd taskboard && docker build -t taskboard:local . (context must still contain go sources).
 
-### ta-0x5: taskboard/deploy/k8s/secret.example.yaml
-- Scope: Example Kubernetes Secret carrying the PostgreSQL URL under key `database-url`.
-- Architecture: Secret example with placeholder values and instructions not to apply it unchanged or commit real credentials (Kubernetes Secret Example).
-- Interfaces: Secret key `database-url`, consumed by the Deployment env reference.
-- Depends on: <none>
-- Consumed by: taskboard/deploy/k8s/deployment.yaml
-- Acceptance:
-  - Placeholder URL only; no live password or real host credentials.
-  - Key name is exactly `database-url`.
-  - Comments instruct operators to create the real Secret out of band.
-- Verify: YAML structure check; key name matches the env reference in deployment.yaml.
+### ta-uns: taskboard/Dockerfile
+- Scope: Multi-stage Docker build recipe for the taskboard binary.
+- Architecture: architecture.md, Docker multi-stage build recipe (taskboard/Dockerfile).
+- Interfaces: builder compiles `CGO_ENABLED=0 GOOS=linux go build -o /app/taskboard ./cmd/taskboard`; final stage alpine:3.20 running as a non-root numeric UID; `EXPOSE 8080`; `TASKBOARD_HOST=0.0.0.0`; CA certificates installed in the final image.
+- Depends on: taskboard/go.mod, taskboard/go.sum, taskboard/cmd/taskboard/main.go, taskboard/.dockerignore (ta-2ok).
+- Consumed by: taskboard/deploy/k8s/deployment.yaml (ta-om9) via image `taskboard:local`.
+- Acceptance: builder image is a golang tag whose version is >= the go directive in go.mod (go.mod declares go 1.26.1, so use golang:1.26-alpine; architecture's golang:1.25-alpine is too old and must not be used).
+- Acceptance: `go mod download` succeeds in the builder with GOTOOLCHAIN=local.
+- Acceptance: final image contains no Go toolchain or Node runtime; web assets are embedded so no separate web directory is needed at runtime.
+- Acceptance: non-root numeric UID in the final stage.
+- Verify: cd taskboard && go test ./... && docker build -t taskboard:local .
 
 ### ta-om9: taskboard/deploy/k8s/deployment.yaml
-- Scope: Single-replica Kubernetes Deployment for TaskBoard.
-- Architecture: Port 8080, liveness `GET /api/health`, readiness `GET /api/ready`, and `TASKBOARD_DB_DRIVER` plus `TASKBOARD_DATABASE_URL` injected from Secret key `database-url`.
-- Interfaces: Container port 8080 named `http`; env `TASKBOARD_HOST=0.0.0.0`; `TASKBOARD_DB_DRIVER=postgres`; `TASKBOARD_DATABASE_URL` from Secret `database-url`.
-- Depends on: taskboard/deploy/k8s/secret.example.yaml
-- Consumed by: taskboard/deploy/k8s/service.yaml
-- Acceptance:
-  - `replicas: 1`; image name is replaceable and not tied to a registry.
-  - Readiness probe uses `/api/ready` and liveness uses `/api/health`, not `/`.
-  - Non-root `securityContext`; no privileged container, host networking, or hostPath volume.
-  - Resource requests and limits are set.
-  - No PostgreSQL Deployment, StatefulSet, or TaskBoard PVC.
-- Verify: YAML structure check; probe paths; port 8080 named `http`; Secret key wiring (`database-url`).
+- Scope: Kubernetes Deployment for the taskboard container.
+- Architecture: architecture.md, Kubernetes deployment manifests.
+- Interfaces: Deployment `taskboard`, label `app: taskboard`, container port `http` 8080, env DATABASE_URL from Secret `taskboard-db` key `database-url`, readiness and liveness HTTP probes on `/`.
+- Depends on: taskboard/Dockerfile (ta-uns) for image `taskboard:local`; taskboard/deploy/k8s/secret.example.yaml (ta-0x5) for the Secret name and key.
+- Consumed by: taskboard/deploy/k8s/service.yaml (ta-cp8) via label selector `app: taskboard`.
+- Acceptance: replicas 1; imagePullPolicy IfNotPresent; probes target port name `http`.
+- Acceptance: no credentials embedded in the manifest.
+- Verify: kubectl apply --dry-run=client -f taskboard/deploy/k8s/deployment.yaml (YAML must parse).
 
 ### ta-cp8: taskboard/deploy/k8s/service.yaml
-- Scope: Internal ClusterIP Service for TaskBoard.
-- Architecture: `ClusterIP` Service targeting port 8080. Ingress is out of scope.
-- Interfaces: Service port 80 to targetPort `http` (8080); selector matches Deployment pod labels.
-- Depends on: taskboard/deploy/k8s/deployment.yaml
-- Consumed by: <none>
-- Acceptance:
-  - `type: ClusterIP`.
-  - Selector labels exactly match the Deployment template labels.
-  - targetPort resolves to the container port named `http` (8080).
-- Verify: YAML structure check; selector and port match against deployment.yaml.
+- Scope: Kubernetes ClusterIP Service for the taskboard Deployment.
+- Architecture: architecture.md, Kubernetes Service configuration.
+- Interfaces: Service `taskboard`, type ClusterIP, selector `app: taskboard`, port 80 to targetPort `http`.
+- Depends on: taskboard/deploy/k8s/deployment.yaml (ta-om9) for the selector and port name.
+- Consumed by: none.
+- Acceptance: selector matches Deployment labels; no secret values present.
+- Verify: kubectl apply --dry-run=client -f taskboard/deploy/k8s/service.yaml.
 
 ## Future considerations
-- Ingress and TLS provisioning are out of scope per SPEC §13.
-- Restart persistence and the PostgreSQL integration gate are deferred to phase-5-release.
+- Architecture lists golang:1.25-alpine but go.mod requires go 1.26.1; architecture.md should be updated to golang:1.26-alpine in a later review.
