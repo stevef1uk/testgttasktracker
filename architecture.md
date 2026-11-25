@@ -58,14 +58,14 @@ PostgreSQL runtime launch command from SPEC:
 | File | Owns (exported) | Must not define |
 | --- | --- | --- |
 | `taskboard/internal/config/config.go` | Config struct, LoadConfig function | Database queries, HTTP handlers |
-| `taskboard/internal/model/model.go` | Project struct, Task struct, validation functions | SQL DDL statements, HTTP responses |
-| `taskboard/internal/store/store.go` | Store interface, repository error constants, DDL constants | HTTP routing logic |
-| `taskboard/internal/store/sqlite.go` | NewSQLiteStore function | Postgres SQL dialect syntax |
-| `taskboard/internal/store/postgres.go` | NewPostgresStore function | SQLite PRAGMA commands |
+| `taskboard/internal/model/model.go` | Project struct, Task struct, Status and Priority types/constants, ValidateProject, ValidateTask functions | SQL DDL statements, HTTP responses |
+| `taskboard/internal/store/store.go` | Store interface, ErrNotFound and repository error constants, DDL schema constants | HTTP routing logic |
+| `taskboard/internal/store/sqlite.go` | SQLiteStore struct, NewSQLiteStore function | Postgres SQL dialect syntax |
+| `taskboard/internal/store/postgres.go` | PostgresStore struct, NewPostgresStore function | SQLite PRAGMA commands |
 | `taskboard/web/assets.go` | FS embed variable | Business logic |
 | `taskboard/internal/web/app.go` | App struct, NewApp function | SQL statements |
 | `taskboard/internal/web/api.go` | API route handler methods on App struct | Template rendering |
-| `taskboard/cmd/taskboard/main.go` | main entrypoint function | Core package helper routines |
+| `taskboard/cmd/taskboard/main.go` | main function | Core package helper routines |
 | `taskboard/web/templates/index.html` | HTML layout template | Client-side JavaScript |
 | `taskboard/web/static/app.js` | Browser JavaScript UI state handling | Server-side template compilation |
 | `taskboard/web/static/style.css` | Plain CSS layout styles | JavaScript DOM manipulators |
@@ -93,13 +93,16 @@ PostgreSQL runtime launch command from SPEC:
 | `GET` | `/` | Serve server-rendered HTML page (`index.html` via `html/template`) |
 | `GET` | `/static/*` | Serve embedded static assets (`app.js`, `style.css`) |
 
+### Startup / dependency order
+`config.LoadConfig` → `NewSQLiteStore` / `NewPostgresStore` (with transactional advisory lock schema init) → `web.NewApp` → route registration → `http.ListenAndServe` → graceful SIGTERM shutdown
+
 ### Server Wiring Pattern
-1. Entrypoint `taskboard/cmd/taskboard/main.go` parses configuration settings from environment variables using `taskboard/internal/config/config.go`.
-2. Based on TASKBOARD_DB_DRIVER, instantiates SQLite or PostgreSQL store and runs schema setup.
-3. Instantiates HTTP app using `taskboard/internal/web/app.go` and `taskboard/web/assets.go`.
-4. Registers REST routes and static file handler on standard library `net/http` router.
-5. Starts HTTP server listening on configured host and port.
-6. Listens for SIGINT/SIGTERM to trigger graceful server shutdown.
+1. Entrypoint `taskboard/cmd/taskboard/main.go` parses configuration settings from environment variables using `taskboard/internal/config/config.go` via `config.LoadConfig`.
+2. Based on `TASKBOARD_DB_DRIVER` (`sqlite` or `postgres`), instantiates store (`NewSQLiteStore` or `NewPostgresStore`) and runs schema setup (without silent fallback to SQLite if PostgreSQL connection fails).
+3. Instantiates HTTP app `web.NewApp` using `taskboard/internal/web/app.go` and embedded assets in `taskboard/web/assets.go` (`FS`).
+4. Registers REST routes and static file handler on standard library `net/http` ServeMux router.
+5. Starts HTTP server listening on configured `TASKBOARD_HOST:TASKBOARD_PORT`.
+6. Listens for SIGINT/SIGTERM to trigger graceful server shutdown with context timeout and database close.
 
 ## Docker & Deployment
 
@@ -286,13 +289,22 @@ delivery_phases:
 - Implement SQLite persistence with foreign keys PRAGMA and busy timeout in `taskboard/internal/store/sqlite.go`.
 
 ### phase-1-app
-- Implement PostgreSQL database engine with transactional advisory lock table creation in `taskboard/internal/store/postgres.go`.
-- Implement unit tests for SQLite store contract in `taskboard/internal/store/store_test.go` and optional PostgreSQL integration tests in `taskboard/internal/store/postgres_integration_test.go`.
-- Construct web server application setup and project REST API routes in `taskboard/internal/web/app.go` and `taskboard/internal/web/api.go`.
+- Implement PostgreSQL database engine in `taskboard/internal/store/postgres.go` with idempotent schema creation under transactional advisory lock (`pg_advisory_xact_lock`), `$1` placeholders, and identity primary keys.
+- Implement unit tests for store contract in `taskboard/internal/store/store_test.go` and optional PostgreSQL integration tests in `taskboard/internal/store/postgres_integration_test.go`.
+- Construct web server setup in `taskboard/internal/web/app.go` and API handlers in `taskboard/internal/web/api.go`:
+  - `GET /api/health`: 200 `{"status":"ok"}`
+  - `GET /api/ready`: 200 `{"status":"ready"}` or 503 `{"error":"database unavailable"}`
+  - `GET /api/projects`: 200 array ordered by ascending ID; empty lists serialize as `[]`
+  - `POST /api/projects`: 201 project JSON; 400 on blank or overlong name
+  - `DELETE /api/projects/{project_id}`: 204 empty body; 404 if missing
+  - `GET /api/projects/{project_id}/tasks`: 200 array ordered by ID; supports combined `status` and `priority` AND filters; 404 if project missing; 400 on invalid filter enum
+  - `POST /api/projects/{project_id}/tasks`: 201 task JSON; 404 if project missing; 400 on invalid fields
+  - `PATCH /api/tasks/{task_id}`: 200 updated task JSON; 400 on empty or explicit-null PATCH fields or invalid enums; 404 if missing
+  - `DELETE /api/tasks/{task_id}`: 204 empty body; 404 if missing
 - Implement embed directive in `taskboard/web/assets.go` embedding `taskboard/web/templates/*`.
 - Provide HTML layout structure in `taskboard/web/templates/index.html`.
-- Create main application entrypoint in `taskboard/cmd/taskboard/main.go` with signal handling for graceful shutdown.
-- Add API project integration tests in `taskboard/internal/web/api_test.go`.
+- Create main entrypoint in `taskboard/cmd/taskboard/main.go` loading config, selecting dialect with no silent SQLite fallback on PostgreSQL failure, listening on `TASKBOARD_HOST:TASKBOARD_PORT`, and handling SIGTERM for graceful shutdown.
+- Add API project integration tests in `taskboard/internal/web/api_test.go` asserting status codes, JSON response formats, error messages `{"error":"..."}`, and empty list serialization as `[]`.
 
 ### phase-2-kanban
 - Implement client-side vanilla JavaScript in `taskboard/web/static/app.js` handling project creation/selection, task CRUD, status transitions (todo -> doing -> done), and filters.
