@@ -30,7 +30,7 @@ Manual smoke for this phase: `GET /api/health`, `GET /`, create/list/delete proj
 | PATCH | `/api/tasks/{task_id}` |
 | DELETE | `/api/tasks/{task_id}` |
 
-Task routes are registered by the route table but task behavior is phase-2; in phase-1-app the task handlers may return 501 or be absent from api.go, and no phase-1-app test may assert task CRUD.
+Task routes are registered by the route table but task behavior is phase-2; task handler behavior is deferred to phase-2, and no phase-1-app test may assert task CRUD.
 
 **Per-file exports:**
 - `taskboard/internal/store/postgres.go`: `PostgresStore` struct, `NewPostgresStore` function (implements the `Store` interface from store.go).
@@ -124,7 +124,7 @@ Task routes are registered by the route table but task behavior is phase-2; in p
 - Depends on: taskboard/internal/store/store.go, taskboard/web/assets.go (ta-qfs).
 - Consumed by: taskboard/internal/web/api.go (ta-83w), taskboard/cmd/taskboard/main.go (ta-5kn).
 - Acceptance:
-  - All nine SPEC routes are registered with method-aware patterns; unknown routes return 404.
+  - All nine SPEC routes are registered with method-aware patterns; unknown routes return 404. Task route behavior is deferred to phase-2; no phase-1-app test asserts task CRUD.
   - `GET /` renders the embedded `index.html` via html/template and returns 200 HTML containing `TaskBoard`.
   - Does not interpolate user input into HTML.
 - Verify: `cd taskboard && go test ./internal/web/... -run 'TestAPIIndexServesHTML'`
