@@ -10,13 +10,6 @@
     },
     {
       "stack": "go",
-      "rule": "Test review lesson: Repair implementation beads: ta-qb9",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-25T05:26:27Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Auto-routed to Polecat for test repair: Verify is green (go test ./..",
       "source": "qa_rework",
       "hits": 1,
@@ -57,6 +50,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-25T09:05:08Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-xmb",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-25T09:42:55Z"
     }
   ]
 }
