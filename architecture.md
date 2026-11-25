@@ -63,7 +63,7 @@ PostgreSQL runtime launch command from SPEC:
 | `taskboard/internal/store/sqlite.go` | SQLiteStore struct, NewSQLiteStore function | Postgres SQL dialect syntax |
 | `taskboard/internal/store/postgres.go` | PostgresStore struct, NewPostgresStore function | SQLite PRAGMA commands |
 | `taskboard/web/assets.go` | FS embed variable | Business logic |
-| `taskboard/internal/web/app.go` | App struct, NewApp function | SQL statements |
+| `taskboard/internal/web/app.go` | App struct, NewApp function, Handler method | SQL statements |
 | `taskboard/internal/web/api.go` | API route handler methods on App struct | Template rendering |
 | `taskboard/cmd/taskboard/main.go` | main function | Business domain logic |
 
@@ -73,6 +73,8 @@ The shared database contract is defined in `taskboard/internal/store/store.go`:
 
 ```go
 type Store interface {
+	Ping(ctx context.Context) error
+	GetProject(ctx context.Context, id int64) (*model.Project, error)
 	CreateProject(ctx context.Context, p *model.Project) error
 	ListProjects(ctx context.Context) ([]*model.Project, error)
 	DeleteProject(ctx context.Context, id int64) error
@@ -86,7 +88,7 @@ type Store interface {
 
 ## HTTP + entrypoint integration
 
-HTML UI is served at GET / using embedded templates from `taskboard/web/templates/index.html`. Static assets are served at GET /static/app.js and static style assets from `taskboard/web/static/style.css`.
+HTML UI is served at GET / using embedded templates from `taskboard/web/templates/index.html`. Static assets are served at GET /static/app.js and static stylesheet from embedded assets in `taskboard/web/static/app.js` and `taskboard/web/static/style.css`.
 
 | Method | Path | Success | Errors |
 | --- | --- | --- | --- |
@@ -101,12 +103,12 @@ HTML UI is served at GET / using embedded templates from `taskboard/web/template
 | DELETE | `/api/tasks/{task_id}` | 204 empty body | 404 missing |
 
 Server entrypoint (`taskboard/cmd/taskboard/main.go`):
-1. Parses CLI flags / loads configuration via config.LoadConfig().
-2. Selects database driver based on TASKBOARD_DB_DRIVER (sqlite or postgres) and initializes NewSQLiteStore or NewPostgresStore.
-3. Creates web application instance passing the selected store.
-4. Registers static file handlers serving assets embedded in `taskboard/web/assets.go`.
-5. Starts HTTP server on configured host and port.
-6. Handles graceful SIGINT/SIGTERM shutdown.
+1. Loads configuration via config.LoadConfig().
+2. Selects database driver based on TASKBOARD_DB_DRIVER (sqlite or postgres) and initializes sqlite.NewSQLiteStore(ctx, cfg.DBPath) or postgres.NewPostgresStore(ctx, cfg.DatabaseURL).
+3. Constructs web application instance app := web.NewApp(s). web.NewApp configures all page routes, embedded static file handlers from web.FS, and API routes on its internal http.ServeMux.
+4. Passes app.Handler() directly as the handler for http.Server (without registering routes on http.DefaultServeMux).
+5. Starts HTTP server on configured host and port (cfg.Host:cfg.Port).
+6. Handles graceful SIGINT/SIGTERM shutdown, closing the server with timeout context and calling s.Close().
 
 ## Requirements
 
@@ -124,7 +126,7 @@ Server entrypoint (`taskboard/cmd/taskboard/main.go`):
   - Unicode character count validation using utf8.RuneCountInString: Project name (1-80 runes), Task title (1-120 runes), Task description (max 1000 runes).
   - Status enum validation: todo, doing, done.
   - Priority enum validation: low, medium, high.
-- Store interface in `taskboard/internal/store/store.go` with exact methods: CreateProject, ListProjects, DeleteProject, CreateTask, ListTasks, UpdateTask, DeleteTask, Close.
+- Store interface in `taskboard/internal/store/store.go` with exact methods: Ping, GetProject, CreateProject, ListProjects, DeleteProject, CreateTask, ListTasks, UpdateTask, DeleteTask, Close.
 - SQLite store implementation in `taskboard/internal/store/sqlite.go`:
   - Enables foreign keys (PRAGMA foreign_keys = ON;) on connection setup.
   - Configures 5000ms busy timeout.
