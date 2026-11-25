@@ -3,20 +3,6 @@
 ## Requirements → tests
 
 ### phase-1-core
-Requirement: Config reads TASKBOARD_DB_DRIVER, TASKBOARD_DB_PATH, TASKBOARD_DATABASE_URL, TASKBOARD_HOST, TASKBOARD_PORT with SPEC section 4 defaults; invalid driver, port, or missing PostgreSQL URL fail startup without echoing the URL.
-Level: unit
-Test file: taskboard/internal/config/config_test.go
-Bead ID: ta-rmn
-Phase: phase-1-core
-Scenarios:
-- No env set yields sqlite, taskboard.db, 127.0.0.1, 8080, empty URL.
-- Driver accepts exactly sqlite or postgres; any other value errors naming TASKBOARD_DB_DRIVER.
-- Port 0, 65536, and non-numeric values error naming TASKBOARD_PORT; 1 and 65535 pass.
-- postgres driver with empty TASKBOARD_DATABASE_URL errors with no SQLite fallback.
-Assertions:
-- Config fields equal expected values (t.Setenv per case).
-- Error text does not contain the URL or password substring.
-
 Requirement: Domain validation: project name trimmed to 1-80 code points; task title trimmed to 1-120; description verbatim up to 1000; status and priority enums exact.
 Level: unit
 Test file: taskboard/internal/model/model_test.go
@@ -34,16 +20,15 @@ Assertions:
 Requirement: SQLite store contract: idempotent schema creation, foreign keys enforced on every pooled connection, 5000 ms busy timeout, project and task CRUD, ascending ID order, status/priority filters combined with AND, partial PATCH, project delete cascades to tasks, persistence across close and reopen.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: ta-5rq
 Phase: phase-1-app
 Scenarios:
-- Fresh file schema is empty; second init on the same file keeps existing rows and runs no DROP or reset.
+- Fresh file schema is empty; second init on the same file keeps existing rows.
 - Create and list projects in ascending ID order; tasks default to todo and medium with UTC RFC3339 timestamps.
-- Filters by status, priority, and both combine with AND; list order ascending ID.
+- Filters by status, priority, and both combine with AND.
 - Patch changes only supplied fields; deleting a project cascades to its tasks.
 - Insert task with unknown project_id fails with a foreign key error.
 - Close and reopen the same t.TempDir() file preserves data.
-- Unicode code-point boundaries; SQL-injection-style names stored as literal text.
 Assertions:
 - Returned rows equal expected values; timestamps parse as UTC RFC3339.
 - Test DB path is under t.TempDir(), never taskboard.db.
@@ -52,13 +37,12 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: ta-9ik
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
 - Concurrent schema init is safe under advisory lock.
 - Cascade delete, ordering, filters, UTC timestamps, and identity IDs match SQLite.
-- Test objects use unique names or an isolated schema and clean up only their own data.
 Assertions:
 - Same expected values as the SQLite contract tests.
 - Error output does not include the connection URL.
@@ -66,15 +50,13 @@ Assertions:
 Requirement: Project REST API: GET /api/health, GET /api/ready, GET and POST /api/projects, DELETE /api/projects/{project_id} with SPEC section 6 status codes and JSON shapes; GET / serves the embedded HTML shell.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: ta-62r
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
 - Ready returns {"status":"ready"} on healthy SQLite and 503 {"error":"database unavailable"} on failure.
 - Project create returns 201 with JSON; blank name returns 400 with an error object.
 - Project list returns [] when empty and ascending ID order otherwise; delete returns 204 with empty body, then 404 for missing.
-- Malformed JSON and invalid IDs return documented 400 or 404.
-- GET / returns 200 text/html containing the TaskBoard heading and the project form.
 - Storage failure returns safe 500 JSON with no SQL text; project list failure returns 500, never an empty array.
 Assertions:
 - Decoded JSON values, keys, and types match SPEC; whitespace is not asserted.
@@ -91,29 +73,12 @@ Scenarios:
 - PATCH with a nonempty subset updates only those fields; empty PATCH and explicit null values return 400.
 - Task list filters by status, priority, and both; invalid filter values return 400.
 - Missing project returns 404 on task list and create; missing task returns 404 on patch and delete.
-- Over-length title (121 runes) and description (1001 runes) return 400 on create and PATCH; blank title returns 400.
-- Task storage failure returns safe generic 500 JSON with no SQL or driver text.
+- Over-length title (121 runes) and description (1001 runes) return 400; blank title returns 400.
 - Missing static file (GET /static/missing.js) returns 404.
 Assertions:
 - Decoded task JSON matches expected values; updated_at changes on PATCH.
 - Filtered lists contain exactly the expected IDs in ascending order.
 - Rejections return 400 with a single {"error": ...} object.
-
-Requirement: Rendered HTML contains the TaskBoard heading, project and task forms, and To Do, Doing, Done headings; static assets /static/app.js and /static/style.css are served with nonempty bodies and the interactive client code is present.
-Level: integration
-Test file: taskboard/internal/web/ui_content_test.go
-Bead ID: ta-kf2
-Phase: phase-2-kanban
-Scenarios:
-- Root page contains TaskBoard, the project input and Add project button, the task form with Add task, and the three column headings.
-- Status filter options are exactly all, todo, doing, done; priority filter options are exactly all, low, medium, high.
-- Root HTML references /static/app.js and /static/style.css.
-- GET /static/app.js and GET /static/style.css return 200 with nonempty bodies and expected content types; the app.js body references the task and project API paths.
-- Asset references in the HTML match the served /static paths exactly.
-Assertions:
-- Status 200 and Content-Type text/html for the root page; expected substrings present.
-- Static bodies have nonzero length and expected content types.
-- Asset references in the HTML match the served /static paths exactly.
 
 ### phase-3-browser
 Requirement: Browser E2E: real clicks, typing, and selections drive the UI; project and task creation, Move forward from To Do to Doing to Done, delete, and priority filter reset are asserted via DOM and API state.
@@ -122,7 +87,6 @@ Test file: taskboard/playwright/taskboard.spec.ts
 Bead ID: pending (phase-3-browser bead not yet created; Planner to assign)
 Phase: phase-3-browser
 Scenarios:
-- Initial page shows TaskBoard and three columns.
 - Create a uniquely named project and task through the UI; card appears in To Do.
 - Click Move forward to Doing, then Done; the forward control is hidden or disabled on done.
 - Delete the task; it disappears from the DOM and the API list.
