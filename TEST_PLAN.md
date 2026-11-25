@@ -16,11 +16,24 @@ Assertions:
 - Exactly 80 multibyte runes pass for names; 81 fail (utf8.RuneCountInString semantics).
 - Validators return nil for valid input and an error for invalid input.
 
+Requirement: Configuration parsing: TASKBOARD_DB_DRIVER (sqlite|postgres, default sqlite), TASKBOARD_DB_PATH (default taskboard.db), TASKBOARD_DATABASE_URL (required for postgres), TASKBOARD_HOST (default 127.0.0.1), TASKBOARD_PORT (integer 1-65535, default 8080); invalid values fail startup.
+Level: unit
+Test file: taskboard/internal/config/config_test.go
+Bead ID: ta-gd2
+Phase: phase-1-core
+Scenarios:
+- Defaults apply when all variables are unset.
+- Invalid driver, empty postgres URL with driver postgres, and port 0, 65536, or non-numeric values are rejected.
+- Valid overrides populate every Config field.
+Assertions:
+- LoadConfig returns an error naming the invalid variable and never echoes the database URL.
+- Returned Config fields equal the expected values for valid input.
+
 ### phase-1-app
 Requirement: SQLite store contract: idempotent schema creation, foreign keys enforced on every pooled connection, 5000 ms busy timeout, project and task CRUD, ascending ID order, status/priority filters combined with AND, partial PATCH, project delete cascades to tasks, persistence across close and reopen.
 Level: integration
 Test file: taskboard/internal/store/store_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: ta-5rq
 Phase: phase-1-app
 Scenarios:
 - Fresh file schema is empty; second init on the same file keeps existing rows.
@@ -37,7 +50,7 @@ Assertions:
 Requirement: PostgreSQL store runs the same contract against a dedicated disposable test database when TASKBOARD_TEST_POSTGRES_URL is set; skipped otherwise.
 Level: integration
 Test file: taskboard/internal/store/postgres_integration_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: ta-9ik
 Phase: phase-1-app
 Scenarios:
 - Skipped with t.Skip when TASKBOARD_TEST_POSTGRES_URL is empty.
@@ -50,7 +63,7 @@ Assertions:
 Requirement: Project REST API: GET /api/health, GET /api/ready, GET and POST /api/projects, DELETE /api/projects/{project_id} with SPEC section 6 status codes and JSON shapes; GET / serves the embedded HTML shell.
 Level: integration
 Test file: taskboard/internal/web/api_test.go
-Bead ID: pending (phase-1-app bead not yet created; Planner to assign)
+Bead ID: ta-83w
 Phase: phase-1-app
 Scenarios:
 - Health returns {"status":"ok"} with 200 independent of DB state.
@@ -66,7 +79,7 @@ Assertions:
 Requirement: Task REST API (list, create, patch, delete) with server-owned status, IDs, and timestamps, nonempty PATCH, explicit-null rejection, and AND-combined filters.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: ta-88r
+Bead ID: ta-s3j
 Phase: phase-2-kanban
 Scenarios:
 - Task create defaults status todo and priority medium; client-supplied status, id, and timestamps are ignored.
@@ -79,6 +92,17 @@ Assertions:
 - Decoded task JSON matches expected values; updated_at changes on PATCH.
 - Filtered lists contain exactly the expected IDs in ascending order.
 - Rejections return 400 with a single {"error": ...} object.
+
+Requirement: Static UI content: GET / serves real TaskBoard HTML with the TaskBoard heading, the project and task forms, and To Do, Doing, and Done columns; GET /static/app.js and GET /static/style.css return 200 with nonempty content and correct content types.
+Level: integration
+Test file: taskboard/internal/web/ui_content_test.go
+Bead ID: ta-5s6
+Phase: phase-2-kanban
+Scenarios:
+- Index page contains TaskBoard, the project form, the task form, and all three column headings.
+- app.js and style.css each return 200 with nonempty bodies and expected content types.
+Assertions:
+- Response bodies contain the required literal strings; status codes and Content-Type are exact.
 
 ### phase-3-browser
 Requirement: Browser E2E: real clicks, typing, and selections drive the UI; project and task creation, Move forward from To Do to Doing to Done, delete, and priority filter reset are asserted via DOM and API state.
