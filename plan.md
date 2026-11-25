@@ -4,16 +4,18 @@ Active phase: `phase-1-app` (PostgreSQL store and runnable project API). Depends
 
 Scope: only the nine `required_files` of `phase-1-app` are in scope. Task routes, Kanban UI, `taskboard/web/static/*`, Playwright, Docker, and k3s work belong to later phases and are deferred.
 
-Rework amendment: the QA failure was `taskboard/web/assets.go:7:24: pattern static/*: no matching files found`. `taskboard/web/static/` is empty because its owning beads belong to phase-2-kanban. For phase-1-app, `taskboard/web/assets.go` must embed `templates/*` only. Removing `static/*` from the directive is the required fix, recorded under the `taskboard/web/assets.go` bead below.
+Rework amendment (QA failure): `taskboard/web/assets.go:7:24: pattern static/*: no matching files found`. `taskboard/web/static/` does not exist in phase-1-app because `app.js` and `style.css` are owned by phase-2-kanban. SPEC.md (phase 1b, line 294) requires the phase-1-app embed directive to cover `templates/*` only, then extend to `static/*` in phase 2. The directive `//go:embed templates/* static/*` must not be implemented in phase-1-app. The fix is recorded under the `taskboard/web/assets.go` bead (ta-hzj) below.
 
-Validator alignment: the SPEC HTTP route table is the only source of HTTP paths in this plan. The full table, including the deferred task routes, appears in the Integration contract.
+Bead IDs were checked against `bd list --limit=0 --status=open,in_progress` in this session. `ta-3o6` is in_progress. `ta-71y`, `ta-5rq`, `ta-9ik`, `ta-hzj`, `ta-12r`, `ta-83w`, `ta-or0`, and `ta-5kn` are open. Each of the nine `required_files` maps to exactly one bead.
+
+Validator alignment: the SPEC HTTP route table is the only source of HTTP paths in this plan. The full table, including deferred task routes, appears in the Integration contract.
 
 ## Bead map
 
 ### ta-3o6: taskboard/web/templates/index.html
 - Scope: real server-rendered HTML shell served by the root page handler. Full task controls are deferred to phase-2-kanban.
-- Architecture: `html/template` compatible; contains the `TaskBoard` heading, the project input, the `Add project` button, and a project selector region. No inline script that interpolates user text.
-- Interfaces: template name `index.html`; no Go symbols.
+- Architecture: `html/template` compatible; contains the `TaskBoard` heading, a project name input, an `Add project` button, and a project list region. No inline script that interpolates user text.
+- Interfaces: template file `templates/index.html`; no Go symbols.
 - Depends on: none
 - Consumed by: taskboard/web/assets.go, taskboard/internal/web/app.go
 - Acceptance: the file is nonempty and contains `TaskBoard`, a project name input, and an `Add project` control.
@@ -21,46 +23,39 @@ Validator alignment: the SPEC HTTP route table is the only source of HTTP paths 
 
 ### ta-hzj: taskboard/web/assets.go
 - Scope: `embed.FS` variable `FS` for phase-1-app.
-- Architecture: the directive must be `//go:embed templates/*` only. `static/*` is added in phase-2-kanban, when `taskboard/web/static/` is created.
+- Architecture: the only directive for phase-1-app is `//go:embed templates/*`. The `static/*` pattern is added in phase-2-kanban, when `taskboard/web/static/` is created. The file must compile with `taskboard/web/static/` absent.
 - Interfaces: `var FS embed.FS`.
 - Depends on: taskboard/web/templates/index.html
 - Consumed by: taskboard/internal/web/app.go, taskboard/internal/web/api_test.go
-- Acceptance: `go build ./web/...` succeeds; `fs.ReadFile(FS, "templates/index.html")` returns the page; no `static/*` pattern appears in phase-1-app.
+- Acceptance: `go build ./web/...` succeeds with no `static/*` pattern present; `fs.ReadFile(FS, "templates/index.html")` returns the page; the directive contains no `static/` text in phase-1-app.
 - Verify: `cd taskboard && go build ./web/...`
 
 ### ta-71y: taskboard/internal/store/postgres.go
-- Status: closed bead; file present. Reopen only if the file is missing or stubbed.
+- Status: open bead. Validate the on-disk file against this contract; reopen the work if the file is missing or stubbed.
 - Scope: `PostgresStore`, `NewPostgresStore`, implementing the `Store` interface from `taskboard/internal/store/store.go`.
 - Architecture: pgx/v5/stdlib through `database/sql`; `$1` placeholders; identity keys; schema creation in a transaction guarded by `pg_advisory_xact_lock`.
-- Interfaces: `NewPostgresStore(ctx context.Context, url string) (*PostgresStore, error)`; `Ping`, `GetProject`, `CreateProject`, `ListProjects`, `DeleteProject`, `CreateTask`, `ListTasks`, `UpdateTask`, `DeleteTask`, `Close`.
+- Interfaces: `NewPostgresStore(ctx context.Context, url string) (*PostgresStore, error)`; methods `Ping`, `GetProject`, `CreateProject`, `ListProjects`, `DeleteProject`, `CreateTask`, `ListTasks`, `UpdateTask`, `DeleteTask`, `Close`.
 - Depends on: taskboard/internal/store/store.go, taskboard/internal/model/model.go
 - Consumed by: taskboard/internal/store/postgres_integration_test.go, taskboard/cmd/taskboard/main.go
 - Acceptance: repeated and concurrent schema init is idempotent; ascending ID order; project delete cascades to tasks; missing rows return `store.ErrNotFound`; the connection URL never appears in errors.
 - Verify: `cd taskboard && go test ./internal/store/...`
 
 ### ta-5rq: taskboard/internal/store/store_test.go
-- Status: closed bead; file present. Reopen only if the file is missing or stubbed.
+- Status: open bead. Validate the on-disk file against this contract; reopen the work if the file is missing or stubbed.
 - Scope: SQLite contract tests for the shared store behavior, using `t.TempDir()` databases.
 - Architecture: standard `testing` package; no dependence on test execution order.
 - Acceptance: fresh schema is empty and repeated init is idempotent; ascending ID order; default status `todo` and priority `medium`; status, priority, and AND filters; PATCH preserves omitted fields; project delete cascades; foreign keys enforced; data persists across reopen; Unicode code-point boundaries.
 - Verify: `cd taskboard && go test ./internal/store/...`
 
 ### ta-9ik: taskboard/internal/store/postgres_integration_test.go
-- Status: closed bead; file present. Reopen only if the file is missing or stubbed.
+- Status: open bead. Validate the on-disk file against this contract; reopen the work if the file is missing or stubbed.
 - Scope: PostgreSQL integration tests for the same store contract.
 - Architecture: runs only when `TASKBOARD_TEST_POSTGRES_URL` is nonempty; uses a disposable database and uniquely named objects; cleans up only its own rows.
 - Acceptance: skips cleanly when the variable is empty; when configured, covers cascade, ordering, filters, timestamps, and schema idempotency; never drops shared schemas.
 - Verify: `cd taskboard && go test ./internal/store/...`
 
-### ta-5kn: taskboard/cmd/taskboard/main.go
-- Scope: process entrypoint: load config, select the store, build the web app, serve HTTP, shut down gracefully.
-- Architecture: `config.LoadConfig()`; `sqlite.NewSQLiteStore` or `postgres.NewPostgresStore`; `web.NewApp(s)`; `app.Handler()` passed to `http.Server`; no `http.DefaultServeMux`.
-- Depends on: taskboard/internal/config/config.go, taskboard/internal/store/sqlite.go, taskboard/internal/store/postgres.go, taskboard/internal/web/app.go
-- Acceptance: invalid config exits nonzero without printing the database URL; SIGINT and SIGTERM trigger shutdown with a timeout, then `Store.Close()`; default bind is `127.0.0.1:8080`.
-- Verify: `cd taskboard && go build ./cmd/taskboard`
-
 ### ta-12r: taskboard/internal/web/app.go
-- Status: in_progress.
+- Status: open bead.
 - Scope: `App`, `NewApp`, `Handler`, the index page handler, and `writeJSON`.
 - Architecture: `http.ServeMux` with method-aware patterns; the index page handler renders `templates/index.html` from `embedweb.FS`; static routes are registered only when the static sub-filesystem exists.
 - Interfaces: `NewApp(s store.Store) *App`; `(*App).Handler() http.Handler`; `writeJSON(w http.ResponseWriter, status int, v any)`.
@@ -82,6 +77,13 @@ Validator alignment: the SPEC HTTP route table is the only source of HTTP paths 
 - Architecture: SQLite store in `t.TempDir()`; a failing store double covers the 503 and 500 paths.
 - Acceptance: exact health and ready JSON; project round trip with state checked afterward; name validation; malformed IDs return 400; missing project returns 404; empty list is `[]`; ascending order; delete body is empty; database failure returns a safe error.
 - Verify: `cd taskboard && go test ./internal/web/...`
+
+### ta-5kn: taskboard/cmd/taskboard/main.go
+- Scope: process entrypoint: load config, select the store, build the web app, serve HTTP, shut down gracefully.
+- Architecture: `config.LoadConfig()`; `sqlite.NewSQLiteStore` or `postgres.NewPostgresStore` selected by `TASKBOARD_DB_DRIVER`; `web.NewApp(s)`; `app.Handler()` passed to `http.Server`; no `http.DefaultServeMux`.
+- Depends on: taskboard/internal/config/config.go, taskboard/internal/store/sqlite.go (phase-1-core), taskboard/internal/store/postgres.go, taskboard/internal/web/app.go
+- Acceptance: invalid config exits nonzero without printing the database URL; SIGINT and SIGTERM trigger shutdown with a timeout, then `Store.Close()`; default bind is `127.0.0.1:8080`.
+- Verify: `cd taskboard && go build ./cmd/taskboard`
 
 ## Integration contract
 
