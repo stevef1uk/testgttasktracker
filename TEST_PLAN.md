@@ -54,7 +54,7 @@ Assertions:
 ### phase-2-kanban
 Requirement: Task CRUD over HTTP with validation, server-controlled status/IDs/timestamps on create, AND-combined filters, Kanban UI with project selector, forms, move-forward, edit, delete, visible errors, and empty states; embedded static assets served with correct content types.
 Level: integration
-Test file: taskboard/internal/web/app_test.go, taskboard/internal/web/ui_content_test.go
+Test file: taskboard/internal/web/app_test.go
 Bead ID: pending
 Phase: phase-2-kanban
 Scenarios:
