@@ -17,14 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in assets.go: internal/web/app.go:42:18: undefined: index",
-      "source": "verify_fix",
-      "bead_path": "taskboard/web/assets.go",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:34:59Z"
-    },
-    {
-      "stack": "go",
       "rule": "QA lesson: ...(truncated)",
       "source": "qa_rework",
       "hits": 3,
@@ -57,6 +49,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T21:25:19Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-ud0",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T21:46:13Z"
     }
   ]
 }

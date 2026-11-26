@@ -58,3 +58,4 @@ form { margin-top: 12px; }
 .pill-medium { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 .pill-high { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 @media (max-width: 800px) { .board { grid-template-columns: 1fr; } }
+[data-column] { min-height: 120px; }
