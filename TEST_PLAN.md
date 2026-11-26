@@ -33,7 +33,7 @@ Assertions:
 Requirement: PostgreSQL store implements the same contract with advisory-locked idempotent schema init; cmd/taskboard starts, shuts down on SIGTERM, and serves api health, api ready, project routes, and the embedded index.html shell; project create/list/delete round-trips over HTTP.
 Level: integration
 Test file: taskboard/internal/store/store_test.go, taskboard/internal/store/postgres_integration_test.go, taskboard/internal/web/api_test.go
-Bead ID: pending — no phase-1-app bead exists yet in bd list --limit=0 ; planning must create one owner bead for each test file above
+Bead ID: store_test.go → ta-en7; postgres_integration_test.go → ta-8pf; api_test.go → ta-is1
 Phase: phase-1-app
 Scenarios:
 - Shared store contract runs against SQLite always and PostgreSQL only when TASKBOARD_TEST_POSTGRES_URL is set.
