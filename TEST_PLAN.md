@@ -54,7 +54,7 @@ Assertions:
 ### phase-2-kanban
 Requirement: Task CRUD over HTTP with validation, server-controlled status/IDs/timestamps on create, AND-combined filters, Kanban UI with project selector, forms, move-forward, edit, delete, visible errors, and empty states; embedded static assets served with correct content types.
 Level: integration
-Test file: taskboard/internal/web/app_test.go
+Test file: taskboard/internal/web/app_test.go, taskboard/internal/web/ui_content_test.go
 Bead ID: ta-cqs
 Phase: phase-2-kanban
 Scenarios:
@@ -76,17 +76,16 @@ Assertions:
 Requirement: Playwright E2E drives the running app through real browser controls: initial shell with three columns; create project and task, Move forward To Do to Doing to Done, delete task; filter to high priority and reset.
 Level: ui
 Test file: taskboard/playwright/taskboard.spec.ts
-Bead ID: pending-planning (future phase-3-browser; no open bead exists yet per plan.md)
+Bead ID: ta-ud0
 Phase: phase-3-browser
 Scenarios:
-- Initial page shows TaskBoard heading and To Do, Doing, Done columns.
-- Create a uniquely named project and a task through the browser form; the task appears in the To Do column.
-- Click Move forward twice; the card moves to Doing, then Done; the forward control is hidden or disabled on Done.
-- Click Delete on the task; it disappears from the DOM and the API no longer lists it.
-- Create two tasks with high and low priority; select the high filter; only the high-priority card is rendered; reset to all; both return.
-- Projects created by each test are deleted in cleanup.
+- Initial page shows TaskBoard heading and the To Do, Doing, Done column sections as visible.
+- Fill the project name and click Create project; select the project in #project-select; fill the task title and click Add task; the card appears in the To Do column with its priority pill.
+- Click Move forward on the card: it moves to Doing, then to Done; the Move forward control is disabled on Done.
+- Click Delete on the card; it disappears from the DOM.
+- Create one high-priority and one low-priority task; select high in the priority filter: only the high card is rendered; select all: both return.
 Assertions:
-- At least one test performs real click, fill, and select actions and asserts DOM state change.
-- Asserted DOM text and API list responses reflect the state change after each action.
-- Tests do not depend on prior-run data and do not rely on execution order.
+- Each flow performs real click, fill, and select actions and asserts the resulting DOM state change.
+- Tests use uniquely named projects and do not depend on prior-run data or execution order.
 - Static-content-only checks are not counted as UI coverage.
+- API list responses and per-test project cleanup are not asserted in this phase.
