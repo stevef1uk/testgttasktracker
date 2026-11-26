@@ -17,13 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "QA lesson: Root cause: taskboard/internal/web/api.go (bead ta-rod, Polecat) implements task CRUD routes ahead of phase-1-app scope",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:31:24Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in assets.go: internal/web/app.go:42:18: undefined: index",
       "source": "verify_fix",
       "bead_path": "taskboard/web/assets.go",
@@ -57,6 +50,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T21:02:10Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-cqs",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T21:25:19Z"
     }
   ]
 }
