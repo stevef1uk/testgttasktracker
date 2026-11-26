@@ -55,7 +55,7 @@ Assertions:
 Requirement: Task CRUD over HTTP with validation, server-controlled status/IDs/timestamps on create, AND-combined filters, Kanban UI with project selector, forms, move-forward, edit, delete, visible errors, and empty states; embedded static assets served with correct content types.
 Level: integration
 Test file: taskboard/internal/web/app_test.go
-Bead ID: pending
+Bead ID: ta-cqs
 Phase: phase-2-kanban
 Scenarios:
 - POST project tasks returns 201 with status todo even when the client sends status, id, or timestamps.
@@ -76,7 +76,7 @@ Assertions:
 Requirement: Playwright E2E drives the running app through real browser controls: initial shell with three columns; create project and task, Move forward To Do to Doing to Done, delete task; filter to high priority and reset.
 Level: ui
 Test file: taskboard/playwright/taskboard.spec.ts
-Bead ID: pending
+Bead ID: pending-planning (future phase-3-browser; no open bead exists yet per plan.md)
 Phase: phase-3-browser
 Scenarios:
 - Initial page shows TaskBoard heading and To Do, Doing, Done columns.
