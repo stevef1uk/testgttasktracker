@@ -2,14 +2,14 @@
 
 Active delivery phase: phase-3-browser (Playwright integration and browser QA).
 
-Scope: only the four required_files below. Bead IDs come from `bd list --limit=0 --status=open,in_progress` in this session. No beads are created in this amendment.
+Scope: only the four required_files for this phase. Bead IDs below come from `bd list --limit=0 --all` in this session. No beads are created or deleted in this amendment.
 
 ## Rework amendment (review feedback)
 
-1. **Verify path.** The phase verify is the native command only: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`. Compose files under taskboard/ (docker-compose.yml, Dockerfile.playwright) are outside this phase and are not verify paths (architecture.md line 143).
-2. **Base URL.** taskboard/playwright.config.ts must default `use.baseURL` to `http://127.0.0.1:8080` (architecture.md line 57). The cached content with `http://app:8080` is superseded and must be rewritten. `BASE_URL` may override the default.
-3. **Chromium blocker.** The previous run failed because Chromium was missing for Playwright (`browserType.launch: Executable doesn't exist`). This is an environment prerequisite, not a spec defect. The polecat must not install browsers on the host. The verify environment must supply a Chromium build for Playwright. If it cannot, report an environment blocker rather than closing ta-ud0.
-4. **Server prerequisite.** The TaskBoard server must be running on 127.0.0.1:8080 before the Playwright verify runs. The server is started separately; playwright.config.ts defines no webServer block.
+1. **Verify command.** The phase verify is the native command only: `cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright`. Compose files (docker-compose.yml, Dockerfile.playwright) and taskboard/Dockerfile belong to phase-4-deploy and are not verify paths for this phase (architecture.md line 143).
+2. **Base URL.** taskboard/playwright.config.ts must default `use.baseURL` to `http://127.0.0.1:8080` (architecture.md line 57). Any cached content using `http://app:8080` is superseded. `BASE_URL` may override the default. If the on-disk config still uses a Compose hostname, the polecat must reopen ta-aug and rewrite it.
+3. **Chromium prerequisite.** The previous failure was `browserType.launch: Executable doesn't exist` for chromium_headless_shell-1234. This is an environment prerequisite. The polecat must not install browsers on the host. If the verify environment cannot supply a Chromium build matching Playwright 1.62.1, report an environment blocker and leave ta-ud0 in_progress.
+4. **Server prerequisite.** The TaskBoard server must be listening on 127.0.0.1:8080 before the Playwright verify runs. The server is started separately; playwright.config.ts defines no webServer block.
 
 ## Bead map
 
@@ -21,7 +21,7 @@ Scope: only the four required_files below. Bead IDs come from `bd list --limit=0
 - Consumed by: taskboard/package-lock.json (ta-1jk), taskboard/playwright.config.ts (ta-aug), taskboard/playwright/taskboard.spec.ts (ta-ud0).
 - Acceptance:
   - taskboard/package.json parses as valid JSON.
-  - @playwright/test appears only under devDependencies, pinned to the version in the lockfile.
+  - @playwright/test appears only under devDependencies, pinned to the version recorded in the lockfile.
   - No build or bundle scripts. No Compose-related scripts or dependencies.
 - Verify: cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright
 
@@ -60,7 +60,7 @@ Scope: only the four required_files below. Bead IDs come from `bd list --limit=0
   - Tests cover: initial shell render; create project; create task appears in To Do; Move forward To Do to Doing to Done; delete removes the task; high-priority filter shows only high tasks and reset restores all.
   - No trivial tests (no expect(true), empty bodies, or import-only checks).
   - Each test uses a unique project name and cleans up what it creates.
-- Environment prerequisites (not implemented by the polecat): Chromium installed for Playwright in the verify environment, and the TaskBoard server running on 127.0.0.1:8080 before Verify. The polecat must not install browsers on the host.
+- Environment prerequisites (not implemented by the polecat): Chromium installed for Playwright in the verify environment, and the TaskBoard server running on 127.0.0.1:8080 before Verify.
 - Verify: cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright
 
 ## Ordering
