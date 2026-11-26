@@ -265,6 +265,26 @@ func TestDeleteNotFound(t *testing.T) {
 	}
 }
 
+func TestMalformedIDReturns400(t *testing.T) {
+	h := web.NewAPI(newFakeStore())
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "project_not_number", path: "/api/projects/abc"},
+		{name: "project_negative", path: "/api/projects/-1"},
+		{name: "project_zero", path: "/api/projects/0"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rr := do(t, h, http.MethodDelete, tc.path, "")
+			if rr.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400 for malformed integer path %s", rr.Code, tc.path)
+			}
+		})
+	}
+}
+
 func TestStoreErrorIsNotLeakedAsPanic(t *testing.T) {
 	// A non-sentinel store failure must produce a 500, not a panic.
 	h := web.NewAPI(failingStore{store.Store(newFakeStore())})

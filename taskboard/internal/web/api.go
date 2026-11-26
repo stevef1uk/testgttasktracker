@@ -269,7 +269,7 @@ func (a *API) updateTask(w http.ResponseWriter, r *http.Request, id int64) {
 func parseID(s string) (int64, error) {
 	id, err := strconv.ParseInt(s, 10, 64)
 	if err != nil || id < 1 {
-		return 0, store.ErrNotFound
+		return 0, fmt.Errorf("%w: invalid id %q: must be positive integer", model.ErrValidation, s)
 	}
 	return id, nil
 }
