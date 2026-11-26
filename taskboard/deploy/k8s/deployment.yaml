@@ -18,25 +18,40 @@ spec:
         - name: taskboard
           image: taskboard:local
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
           env:
-            - name: DATABASE_URL
+            - name: TASKBOARD_DB_DRIVER
+              value: postgres
+            - name: TASKBOARD_DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: taskboard-db
                   key: database-url
           readinessProbe:
             httpGet:
-              path: /
+              path: /api/ready
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: /api/health
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20

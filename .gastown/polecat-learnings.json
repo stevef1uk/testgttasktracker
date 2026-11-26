@@ -17,13 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "QA lesson: ...(truncated)",
-      "source": "qa_rework",
-      "hits": 3,
-      "updated_at": "2026-11-26T20:35:46Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Auto-routed to Polecat for test repair: Phase verify exits 0 on every run of the configured command (go build, go tes...",
       "source": "qa_rework",
       "hits": 1,
@@ -56,6 +49,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T21:46:13Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: ...(truncated)",
+      "source": "qa_rework",
+      "hits": 4,
+      "updated_at": "2026-11-26T22:06:01Z"
     }
   ]
 }
