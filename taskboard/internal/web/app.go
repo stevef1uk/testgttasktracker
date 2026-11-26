@@ -8,9 +8,18 @@ import (
 	"taskboard/internal/store"
 )
 
-// NewApp returns the root HTTP handler: the embedded index page at "/" and
-// the JSON API mounted under "/api/".
-func NewApp(s store.Store, assets fs.FS) (http.Handler, error) {
+// App is the root HTTP application: the index page at "/" and the JSON API
+// mounted under "/api/".
+type App struct {
+	handler http.Handler
+}
+
+// ServeHTTP dispatches requests to the application's route tree.
+func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.handler.ServeHTTP(w, r)
+}
+
+func NewApp(s store.Store, assets fs.FS) (*App, error) {
 	index, err := fs.ReadFile(assets, "templates/index.html")
 	if err != nil {
 		return nil, fmt.Errorf("read index template: %w", err)
@@ -31,5 +40,5 @@ func NewApp(s store.Store, assets fs.FS) (http.Handler, error) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(index)
 	})
-	return mux, nil
+	return &App{handler: mux}, nil
 }

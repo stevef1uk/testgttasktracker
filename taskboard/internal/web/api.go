@@ -51,10 +51,6 @@ func (a *API) handleHealth(w http.ResponseWriter, r *http.Request) {
 		methodNotAllowed(w)
 		return
 	}
-	if err := a.store.Ping(r.Context()); err != nil {
-		writeError(w, err)
-		return
-	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 

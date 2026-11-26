@@ -24,21 +24,6 @@
     },
     {
       "stack": "go",
-      "rule": "QA lesson: Planned but not executed",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-26T19:57:45Z"
-    },
-    {
-      "stack": "go",
-      "rule": "Avoid in main.go: internal/web/app.go:14:28: undefined: webassets",
-      "source": "verify_fix",
-      "bead_path": "taskboard/cmd/taskboard/main.go",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:13:13Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in main.go: cmd/taskboard/main.go:47:28: undefined: webassets",
       "source": "verify_fix",
       "bead_path": "taskboard/cmd/taskboard/main.go",
@@ -58,6 +43,21 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T20:18:49Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in api.go: internal/web/app.go:44:9: cannot use mux (variable of type *http.ServeMux) as *App value in return statement",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/web/api.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:20:40Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: {\"summary\":\"Stage 1 (spec compliance): 2 defects",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:20:58Z"
     }
   ]
 }
