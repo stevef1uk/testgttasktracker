@@ -32,8 +32,8 @@ Assertions:
 ### phase-1-app
 Requirement: PostgreSQL store implements the same contract with advisory-locked idempotent schema init; cmd/taskboard starts, shuts down on SIGTERM, and serves api health, api ready, project routes, and the embedded index.html shell; project create/list/delete round-trips over HTTP.
 Level: integration
-Test file: taskboard/internal/store/store_test.go (shared contract, SQLite always, PostgreSQL when configured), taskboard/internal/store/postgres_integration_test.go (PostgreSQL-only, gated on TASKBOARD_TEST_POSTGRES_URL), taskboard/internal/web/api_test.go (HTTP contract)
-Bead ID: pending — no phase-1-app beads exist yet in bd list --limit=0 . Unique owners to be created by planning: postgres_integration_test.go is owned solely by the PostgreSQL store bead (taskboard/internal/store/postgres.go, depends on ta-29f); store_test.go is owned by the same bead; api_test.go is owned solely by the HTTP API bead (taskboard/internal/web/api.go, depends on the PostgreSQL store bead). Each bead must list its test file in its acceptance criteria.
+Test file: taskboard/internal/store/store_test.go, taskboard/internal/store/postgres_integration_test.go, taskboard/internal/web/api_test.go
+Bead ID: pending — no phase-1-app bead exists yet in bd list --limit=0 ; planning must create one owner bead for each test file above
 Phase: phase-1-app
 Scenarios:
 - Shared store contract runs against SQLite always and PostgreSQL only when TASKBOARD_TEST_POSTGRES_URL is set.
