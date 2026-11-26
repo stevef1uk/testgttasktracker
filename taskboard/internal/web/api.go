@@ -47,7 +47,7 @@ func (a *API) handleReady(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := a.store.Ping(r.Context()); err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "database unavailable"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})

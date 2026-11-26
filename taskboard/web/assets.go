@@ -1,8 +1,12 @@
 package web
 
-import "embed"
+import (
+	"embed"
+	"io/fs"
+)
 
-// Templates holds the HTML templates served by the taskboard UI.
-//
 //go:embed templates/*.html
-var Templates embed.FS
+var templates embed.FS
+
+// FS holds the HTML templates served by the taskboard UI, rooted at the web directory.
+var FS fs.FS = templates

@@ -3,13 +3,6 @@
   "entries": [
     {
       "stack": "go",
-      "rule": "QA lesson: ...(truncated)",
-      "source": "qa_rework",
-      "hits": 2,
-      "updated_at": "2026-11-24T18:32:50Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Repair implementation beads: ta-8l7",
       "source": "qa_rework",
       "hits": 3,
@@ -21,13 +14,6 @@
       "source": "qa_rework",
       "hits": 3,
       "updated_at": "2026-11-25T09:48:44Z"
-    },
-    {
-      "stack": "go",
-      "rule": "QA lesson: {\"summary\":\"Phase-1-app gate passes (go build + go test ./..",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:18:49Z"
     },
     {
       "stack": "go",
@@ -58,6 +44,21 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T20:31:24Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in assets.go: internal/web/app.go:42:18: undefined: index",
+      "source": "verify_fix",
+      "bead_path": "taskboard/web/assets.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:34:59Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: ...(truncated)",
+      "source": "qa_rework",
+      "hits": 3,
+      "updated_at": "2026-11-26T20:35:46Z"
     }
   ]
 }

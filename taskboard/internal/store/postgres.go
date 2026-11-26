@@ -49,11 +49,28 @@ func OpenPostgres(ctx context.Context, dsn string) (Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
+	// Serialize schema creation across concurrent starts: the advisory xact lock
+	// is held until commit, so the idempotent DDL runs under one transaction.
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("begin schema tx: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtext('taskboard_schema'))"); err != nil {
+		_ = tx.Rollback()
+		_ = db.Close()
+		return nil, fmt.Errorf("acquire schema lock: %w", err)
+	}
 	for _, stmt := range postgresDDL {
-		if _, err := db.ExecContext(ctx, stmt); err != nil {
+		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+			_ = tx.Rollback()
 			_ = db.Close()
 			return nil, fmt.Errorf("create postgres schema: %w", err)
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("commit postgres schema: %w", err)
 	}
 	return &postgresStore{db: db}, nil
 }

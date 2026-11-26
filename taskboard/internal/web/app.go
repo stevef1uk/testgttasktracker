@@ -1,7 +1,9 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"net/http"
 
@@ -19,10 +21,12 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.handler.ServeHTTP(w, r)
 }
 
+// NewApp builds the application. The index page is parsed and rendered through
+// html/template from the templates/index.html file in assets.
 func NewApp(s store.Store, assets fs.FS) (*App, error) {
-	index, err := fs.ReadFile(assets, "templates/index.html")
+	tmpl, err := template.ParseFS(assets, "templates/index.html")
 	if err != nil {
-		return nil, fmt.Errorf("read index template: %w", err)
+		return nil, fmt.Errorf("parse index template: %w", err)
 	}
 
 	mux := http.NewServeMux()
@@ -36,9 +40,14 @@ func NewApp(s store.Store, assets fs.FS) (*App, error) {
 			methodNotAllowed(w)
 			return
 		}
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, nil); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(index)
+		_, _ = w.Write(buf.Bytes())
 	})
 	return &App{handler: mux}, nil
 }

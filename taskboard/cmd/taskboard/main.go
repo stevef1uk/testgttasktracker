@@ -45,7 +45,7 @@ func run() error {
 		}
 	}()
 
-	app, err := web.NewApp(s, webassets.Templates)
+	app, err := web.NewApp(s, webassets.FS)
 	if err != nil {
 		return fmt.Errorf("build app: %w", err)
 	}
