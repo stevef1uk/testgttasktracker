@@ -24,13 +24,6 @@
     },
     {
       "stack": "go",
-      "rule": "QA lesson: {\"summary\":\"Stage 1 spec compliance defect: taskboard/web/templates/index.html references static assets /static/style.css and...",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-26T19:38:26Z"
-    },
-    {
-      "stack": "go",
       "rule": "QA lesson: Planned but not executed",
       "source": "qa_rework",
       "hits": 1,
@@ -58,6 +51,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T20:14:33Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: {\"summary\":\"Phase-1-app gate passes (go build + go test ./..",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:18:49Z"
     }
   ]
 }

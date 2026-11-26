@@ -24,7 +24,103 @@
       <h2 id="items-heading">Items</h2>
       <ul id="item-list"></ul>
     </section>
+    <section aria-labelledby="projects-heading">
+      <h2 id="projects-heading">Projects</h2>
+      <p id="error" role="alert" hidden></p>
+      <label for="project-select">Project</label>
+      <select id="project-select" name="project">
+        <option value="">Select a project</option>
+      </select>
+      <form id="project-form">
+        <label for="project-name">Name</label>
+        <input id="project-name" name="name" type="text" required>
+        <button id="project-submit" type="submit">Create project</button>
+      </form>
+    </section>
   </main>
 
+  <script>
+  (function () {
+    "use strict";
+    var statusEl = document.getElementById("status");
+    var errorEl = document.getElementById("error");
+    var selectEl = document.getElementById("project-select");
+    var formEl = document.getElementById("project-form");
+    var nameEl = document.getElementById("project-name");
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+
+    function clearError() {
+      errorEl.textContent = "";
+      errorEl.hidden = true;
+    }
+
+    function renderProjects(projects) {
+      selectEl.innerHTML = "";
+      var placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Select a project";
+      selectEl.appendChild(placeholder);
+      (projects || []).forEach(function (p) {
+        var opt = document.createElement("option");
+        opt.value = String(p.id);
+        opt.textContent = p.name;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function loadProjects() {
+      return fetch("/api/projects", { headers: { "Accept": "application/json" } })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error("Failed to load projects (HTTP " + res.status + ")");
+          }
+          return res.json();
+        })
+        .then(function (projects) {
+          renderProjects(projects);
+          statusEl.textContent = "Ready";
+          clearError();
+        })
+        .catch(function (err) {
+          statusEl.textContent = "Unavailable";
+          showError(err.message);
+        });
+    }
+
+    formEl.addEventListener("submit", function (event) {
+      event.preventDefault();
+      clearError();
+      var name = nameEl.value.trim();
+      if (name === "") {
+        showError("Project name is required");
+        return;
+      }
+      fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ name: name })
+      })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error("Failed to create project (HTTP " + res.status + ")");
+          }
+          return res.json();
+        })
+        .then(function () {
+          formEl.reset();
+          return loadProjects();
+        })
+        .catch(function (err) {
+          showError(err.message);
+        });
+    });
+
+    loadProjects();
+  })();
+  </script>
 </body>
 </html>
