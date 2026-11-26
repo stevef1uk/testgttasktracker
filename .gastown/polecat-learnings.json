@@ -24,13 +24,6 @@
     },
     {
       "stack": "go",
-      "rule": "QA lesson: Auto-routed to Polecat for QA defect repair: QA repair report is incomplete: a failure needs a nonempty summary, explicit repa...",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-25T10:54:04Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in sqlite.go: internal/store/sqlite_test.go:13:12: undefined: OpenSQLite",
       "source": "verify_fix",
       "bead_path": "taskboard/internal/store/sqlite.go",
@@ -60,6 +53,13 @@
       "bead_path": "taskboard/internal/store/postgres_integration_test.go",
       "hits": 1,
       "updated_at": "2026-11-26T19:34:59Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: {\"summary\":\"Stage 1 spec compliance defect: taskboard/web/templates/index.html references static assets /static/style.css and...",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T19:38:26Z"
     }
   ]
 }
