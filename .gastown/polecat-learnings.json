@@ -24,21 +24,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in main.go: cmd/taskboard/main.go:47:28: undefined: webassets",
-      "source": "verify_fix",
-      "bead_path": "taskboard/cmd/taskboard/main.go",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:13:47Z"
-    },
-    {
-      "stack": "go",
-      "rule": "QA lesson: {\"summary\":\"Stage 1 spec compliance: three defects in phase-1-app — postgres driver is a stub in main.go, /api/ready route i...",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:14:33Z"
-    },
-    {
-      "stack": "go",
       "rule": "QA lesson: {\"summary\":\"Phase-1-app gate passes (go build + go test ./..",
       "source": "qa_rework",
       "hits": 1,
@@ -58,6 +43,21 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T20:20:58Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in api.go: internal/web/api.go:149:10: undefined: taskCreateRequest",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/web/api.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:30:50Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: Root cause: taskboard/internal/web/api.go (bead ta-rod, Polecat) implements task CRUD routes ahead of phase-1-app scope",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:31:24Z"
     }
   ]
 }

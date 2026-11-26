@@ -191,61 +191,6 @@ func TestCreateProject(t *testing.T) {
 	}
 }
 
-func TestCreateTaskValidation(t *testing.T) {
-	fs := newFakeStore()
-	_, _ = fs.CreateProject(context.Background(), "Alpha")
-	h := web.NewAPI(fs)
-
-	tests := []struct {
-		name     string
-		path     string
-		body     string
-		wantCode int
-	}{
-		{name: "valid", path: "/api/projects/1/tasks", body: `{"title":"Write docs","priority":"high"}`, wantCode: http.StatusCreated},
-		{name: "blank title", path: "/api/projects/1/tasks", body: `{"title":"","priority":"low"}`, wantCode: http.StatusBadRequest},
-		{name: "bad priority", path: "/api/projects/1/tasks", body: `{"title":"x","priority":"urgent"}`, wantCode: http.StatusBadRequest},
-		{name: "missing project", path: "/api/projects/999/tasks", body: `{"title":"x","priority":"low"}`, wantCode: http.StatusNotFound},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			rr := do(t, h, http.MethodPost, tc.path, tc.body)
-			if rr.Code != tc.wantCode {
-				t.Fatalf("status = %d, want %d (body %s)", rr.Code, tc.wantCode, rr.Body.String())
-			}
-		})
-	}
-}
-
-func TestUpdateTaskStatus(t *testing.T) {
-	fs := newFakeStore()
-	_, _ = fs.CreateProject(context.Background(), "Alpha")
-	_, _ = fs.CreateTask(context.Background(), store.NewTask{ProjectID: 1, Title: "t", Priority: "low"})
-	h := web.NewAPI(fs)
-
-	rr := do(t, h, http.MethodPatch, "/api/tasks/2", `{"status":"done"}`)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", rr.Code, rr.Body.String())
-	}
-	var got model.Task
-	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if got.Status != "done" {
-		t.Fatalf("status field = %q, want done", got.Status)
-	}
-
-	rr = do(t, h, http.MethodPatch, "/api/tasks/2", `{"status":"archived"}`)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("invalid status: got %d, want 400", rr.Code)
-	}
-
-	rr = do(t, h, http.MethodPatch, "/api/tasks/777", `{"status":"done"}`)
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("missing task: got %d, want 404", rr.Code)
-	}
-}
-
 func TestDeleteNotFound(t *testing.T) {
 	h := web.NewAPI(newFakeStore())
 	tests := []struct {
@@ -253,7 +198,6 @@ func TestDeleteNotFound(t *testing.T) {
 		path string
 	}{
 		{name: "project", path: "/api/projects/42"},
-		{name: "task", path: "/api/tasks/42"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
