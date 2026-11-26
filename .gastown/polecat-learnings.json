@@ -24,14 +24,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in sqlite.go: internal/store/sqlite_test.go:13:12: undefined: OpenSQLite",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/store/sqlite.go",
-      "hits": 1,
-      "updated_at": "2026-11-26T19:19:34Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in model.go: internal/model/model_test.go:25:16: undefined: ValidateProjectName",
       "source": "verify_fix",
       "bead_path": "taskboard/internal/model/model.go",
@@ -60,6 +52,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T19:38:26Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: Planned but not executed",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T19:57:45Z"
     }
   ]
 }
