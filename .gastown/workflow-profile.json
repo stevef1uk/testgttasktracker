@@ -157,7 +157,8 @@
       "phase-1-app",
       "phase-2-kanban",
       "phase-3-browser",
-      "phase-4-deploy"
+      "phase-4-deploy",
+      "phase-5-release"
     ],
     "spec_summary": "",
     "min_architecture_bytes": 3200,
