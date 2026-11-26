@@ -25,11 +25,18 @@ func NewAPI(s store.Store) http.Handler {
 	mux.HandleFunc("/api/ready", a.handleReady)
 	mux.HandleFunc("/api/projects", a.handleProjects)
 	mux.HandleFunc("/api/projects/", a.handleProjectByPath)
+	mux.HandleFunc("/api/tasks/", a.handleTaskByPath)
 	return mux
 }
 
 type projectCreateRequest struct {
 	Name string `json:"name"`
+}
+
+type taskCreateRequest struct {
+	Title       string  `json:"title"`
+	Description *string `json:"description"`
+	Priority    *string `json:"priority"`
 }
 
 func (a *API) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -105,9 +112,186 @@ func (a *API) handleProjectByPath(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case len(parts) == 2 && parts[1] == "tasks":
+		a.handleProjectTasks(w, r, id)
 	default:
 		writeError(w, store.ErrNotFound)
 	}
+}
+
+// handleProjectTasks serves GET (filtered list) and POST (create) on /api/projects/{id}/tasks.
+func (a *API) handleProjectTasks(w http.ResponseWriter, r *http.Request, projectID int64) {
+	switch r.Method {
+	case http.MethodGet:
+		status := r.URL.Query().Get("status")
+		priority := r.URL.Query().Get("priority")
+		if status == "all" {
+			status = ""
+		}
+		if priority == "all" {
+			priority = ""
+		}
+		if status != "" {
+			if err := model.ValidateStatus(status); err != nil {
+				writeError(w, err)
+				return
+			}
+		}
+		if priority != "" {
+			if err := model.ValidatePriority(priority); err != nil {
+				writeError(w, err)
+				return
+			}
+		}
+		tasks, err := a.store.ListTasks(r.Context(), projectID, status, priority)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		if tasks == nil {
+			tasks = []model.Task{}
+		}
+		writeJSON(w, http.StatusOK, tasks)
+	case http.MethodPost:
+		var req taskCreateRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, err)
+			return
+		}
+		title, err := model.ValidateTaskTitle(req.Title)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		description := ""
+		if req.Description != nil {
+			description, err = model.ValidateDescription(*req.Description)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+		}
+		priority := "medium"
+		if req.Priority != nil {
+			if err := model.ValidatePriority(*req.Priority); err != nil {
+				writeError(w, err)
+				return
+			}
+			priority = *req.Priority
+		}
+		t, err := a.store.CreateTask(r.Context(), store.NewTask{
+			ProjectID:   projectID,
+			Title:       title,
+			Description: description,
+			Priority:    priority,
+		})
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, t)
+	default:
+		methodNotAllowed(w)
+	}
+}
+
+// handleTaskByPath serves PATCH and DELETE on /api/tasks/{id}.
+func (a *API) handleTaskByPath(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/tasks/"), "/"), "/")
+	if len(parts) != 1 {
+		writeError(w, store.ErrNotFound)
+		return
+	}
+	id, err := parseID(parts[0])
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	switch r.Method {
+	case http.MethodPatch:
+		a.handleTaskPatch(w, r, id)
+	case http.MethodDelete:
+		if err := a.store.DeleteTask(r.Context(), id); err != nil {
+			writeError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		methodNotAllowed(w)
+	}
+}
+
+// handleTaskPatch applies a nonempty subset of title, description, status, and
+// priority. Unknown properties are ignored; explicit nulls are rejected.
+func (a *API) handleTaskPatch(w http.ResponseWriter, r *http.Request, id int64) {
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(r, &raw); err != nil {
+		writeError(w, err)
+		return
+	}
+	var patch model.TaskPatch
+	for key, val := range raw {
+		switch key {
+		case "title", "description", "status", "priority":
+		default:
+			continue
+		}
+		s, err := decodePatchString(key, val)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		switch key {
+		case "title":
+			v, err := model.ValidateTaskTitle(s)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			patch.Title = &v
+		case "description":
+			v, err := model.ValidateDescription(s)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			patch.Description = &v
+		case "status":
+			if err := model.ValidateStatus(s); err != nil {
+				writeError(w, err)
+				return
+			}
+			patch.Status = &s
+		case "priority":
+			if err := model.ValidatePriority(s); err != nil {
+				writeError(w, err)
+				return
+			}
+			patch.Priority = &s
+		}
+	}
+	if patch.IsEmpty() {
+		writeError(w, fmt.Errorf("%w: patch must change at least one field", model.ErrValidation))
+		return
+	}
+	t, err := a.store.UpdateTask(r.Context(), id, patch)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, t)
+}
+
+// decodePatchString rejects explicit null and non-string values for a patched field.
+func decodePatchString(key string, val json.RawMessage) (string, error) {
+	if strings.TrimSpace(string(val)) == "null" {
+		return "", fmt.Errorf("%w: %s cannot be null", model.ErrValidation, key)
+	}
+	var s string
+	if err := json.Unmarshal(val, &s); err != nil {
+		return "", fmt.Errorf("%w: %s must be a string", model.ErrValidation, key)
+	}
+	return s, nil
 }
 
 func parseID(s string) (int64, error) {

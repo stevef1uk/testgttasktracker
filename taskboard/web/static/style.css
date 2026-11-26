@@ -1,0 +1,60 @@
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #2563eb;
+  --danger: #b91c1c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+header, main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+h1 { margin: 0 0 4px; font-size: 1.6rem; }
+h2 { font-size: 1.15rem; margin: 0 0 8px; }
+section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+label { display: block; font-size: 0.85rem; color: var(--muted); margin: 8px 0 4px; }
+input, select, textarea {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 100%;
+  max-width: 420px;
+}
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  margin-top: 8px;
+}
+button.secondary { background: #fff; color: var(--accent); }
+button.danger { background: #fff; color: var(--danger); border-color: var(--danger); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+form { margin-top: 12px; }
+.filters { display: flex; gap: 16px; flex-wrap: wrap; }
+.filters > div { min-width: 180px; }
+#error { color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px; }
+#error[hidden] { display: none; }
+.board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.column { background: #f1f5f9; border-radius: 8px; padding: 12px; min-height: 200px; }
+.column h3 { margin: 0 0 8px; font-size: 0.95rem; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+.card h4 { margin: 0 0 6px; font-size: 0.95rem; }
+.card p { margin: 0 0 6px; color: var(--muted); font-size: 0.85rem; }
+.card .actions button { margin-top: 4px; margin-right: 4px; font-size: 0.8rem; padding: 4px 8px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; border: 1px solid; }
+.pill-low { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.pill-medium { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.pill-high { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+@media (max-width: 800px) { .board { grid-template-columns: 1fr; } }

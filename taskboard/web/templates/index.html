@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TaskBoard</title>
-
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
@@ -12,103 +12,65 @@
     <p id="status">Loading…</p>
   </header>
   <main>
+    <p id="error" role="alert" hidden></p>
+
     <section aria-labelledby="projects-heading">
       <h2 id="projects-heading">Projects</h2>
-      <p id="error" role="alert" hidden></p>
       <label for="project-select">Project</label>
       <select id="project-select" name="project">
         <option value="">Select a project</option>
       </select>
       <form id="project-form">
-        <label for="project-name">Name</label>
+        <label for="project-name">New project name</label>
         <input id="project-name" name="name" type="text" required>
         <button id="project-submit" type="submit">Create project</button>
       </form>
     </section>
+
+    <section aria-labelledby="tasks-heading">
+      <h2 id="tasks-heading">Tasks</h2>
+      <form id="task-form">
+        <label for="task-title">Title</label>
+        <input id="task-title" name="title" type="text" required>
+        <label for="task-description">Description</label>
+        <textarea id="task-description" name="description"></textarea>
+        <label for="task-priority">Priority</label>
+        <select id="task-priority" name="priority">
+          <option value="low">low</option>
+          <option value="medium" selected>medium</option>
+          <option value="high">high</option>
+        </select>
+        <button id="task-submit" type="submit">Add task</button>
+      </form>
+
+      <div class="filters">
+        <div>
+          <label for="status-filter">Status</label>
+          <select id="status-filter" name="status">
+            <option value="all">all</option>
+            <option value="todo">todo</option>
+            <option value="doing">doing</option>
+            <option value="done">done</option>
+          </select>
+        </div>
+        <div>
+          <label for="priority-filter">Priority</label>
+          <select id="priority-filter" name="priority">
+            <option value="all">all</option>
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <div class="board" id="board">
+      <section class="column" aria-labelledby="col-todo"><h3 id="col-todo">To do</h3><div data-column="todo"></div></section>
+      <section class="column" aria-labelledby="col-doing"><h3 id="col-doing">Doing</h3><div data-column="doing"></div></section>
+      <section class="column" aria-labelledby="col-done"><h3 id="col-done">Done</h3><div data-column="done"></div></section>
+    </div>
   </main>
-
-  <script>
-  (function () {
-    "use strict";
-    var statusEl = document.getElementById("status");
-    var errorEl = document.getElementById("error");
-    var selectEl = document.getElementById("project-select");
-    var formEl = document.getElementById("project-form");
-    var nameEl = document.getElementById("project-name");
-
-    function showError(message) {
-      errorEl.textContent = message;
-      errorEl.hidden = false;
-    }
-
-    function clearError() {
-      errorEl.textContent = "";
-      errorEl.hidden = true;
-    }
-
-    function renderProjects(projects) {
-      selectEl.innerHTML = "";
-      var placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Select a project";
-      selectEl.appendChild(placeholder);
-      (projects || []).forEach(function (p) {
-        var opt = document.createElement("option");
-        opt.value = String(p.id);
-        opt.textContent = p.name;
-        selectEl.appendChild(opt);
-      });
-    }
-
-    function loadProjects() {
-      return fetch("/api/projects", { headers: { "Accept": "application/json" } })
-        .then(function (res) {
-          if (!res.ok) {
-            throw new Error("Failed to load projects (HTTP " + res.status + ")");
-          }
-          return res.json();
-        })
-        .then(function (projects) {
-          renderProjects(projects);
-          statusEl.textContent = "Ready";
-          clearError();
-        })
-        .catch(function (err) {
-          statusEl.textContent = "Unavailable";
-          showError(err.message);
-        });
-    }
-
-    formEl.addEventListener("submit", function (event) {
-      event.preventDefault();
-      clearError();
-      var name = nameEl.value.trim();
-      if (name === "") {
-        showError("Project name is required");
-        return;
-      }
-      fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ name: name })
-      })
-        .then(function (res) {
-          if (!res.ok) {
-            throw new Error("Failed to create project (HTTP " + res.status + ")");
-          }
-          return res.json();
-        })
-        .then(function () {
-          formEl.reset();
-          return loadProjects();
-        })
-        .catch(function (err) {
-          showError(err.message);
-        });
-    });
-
-    loadProjects();
-  })();
-  </script>
+  <script src="/static/app.js"></script>
 </body>
 </html>
