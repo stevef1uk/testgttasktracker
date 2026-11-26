@@ -17,28 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in config.go: internal/store/postgres_test.go:18:20: undefined: store.NewPostgresStore",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/config/config.go",
-      "hits": 1,
-      "updated_at": "2026-11-25T06:26:33Z"
-    },
-    {
-      "stack": "go",
-      "rule": "QA lesson: {\"summary\":\"Stage 1 spec compliance defect: taskboard/web/templates/index.html (phase-1-app required file) references static a...",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-25T07:10:58Z"
-    },
-    {
-      "stack": "go",
-      "rule": "QA lesson: {\"summary\":\"Stage 1/2: index.html is a static template with no client-side behavior — it defines forms and lists but no fetc...",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-25T07:26:48Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Repair implementation beads: ta-kf2",
       "source": "qa_rework",
       "hits": 1,
@@ -57,6 +35,30 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-25T10:54:04Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in sqlite.go: internal/store/sqlite_test.go:13:12: undefined: OpenSQLite",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/store/sqlite.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T19:19:34Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in model.go: internal/model/model_test.go:25:16: undefined: ValidateProjectName",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/model/model.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T19:20:27Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in config.go: internal/config/config_test.go:13:14: undefined: Load",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/config/config.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T19:21:16Z"
     }
   ]
 }
