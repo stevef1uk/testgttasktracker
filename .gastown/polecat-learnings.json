@@ -17,14 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in api.go: internal/web/app.go:44:9: cannot use mux (variable of type *http.ServeMux) as *App value in return statement",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/web/api.go",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:20:40Z"
-    },
-    {
-      "stack": "go",
       "rule": "QA lesson: {\"summary\":\"Stage 1 (spec compliance): 2 defects",
       "source": "qa_rework",
       "hits": 1,
@@ -59,6 +51,13 @@
       "source": "qa_rework",
       "hits": 3,
       "updated_at": "2026-11-26T20:35:46Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Auto-routed to Polecat for test repair: Phase verify exits 0 on every run of the configured command (go build, go tes...",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:53:27Z"
     }
   ]
 }
