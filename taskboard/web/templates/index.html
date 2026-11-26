@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taskboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Taskboard</h1>
+    <p id="status">Loading…</p>
+  </header>
+  <main>
+    <section aria-labelledby="new-item-heading">
+      <h2 id="new-item-heading">New item</h2>
+      <form id="item-form">
+        <label for="item-title">Title</label>
+        <input id="item-title" name="title" type="text" required>
+        <button id="item-submit" type="submit">Add</button>
+      </form>
+    </section>
+    <section aria-labelledby="items-heading">
+      <h2 id="items-heading">Items</h2>
+      <ul id="item-list"></ul>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

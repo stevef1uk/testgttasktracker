@@ -17,13 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "Test review lesson: Repair implementation beads: ta-kf2",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-25T09:05:08Z"
-    },
-    {
-      "stack": "go",
       "rule": "Test review lesson: Repair implementation beads: ta-xmb",
       "source": "qa_rework",
       "hits": 3,
@@ -59,6 +52,14 @@
       "bead_path": "taskboard/internal/config/config.go",
       "hits": 1,
       "updated_at": "2026-11-26T19:21:16Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Avoid in postgres_integration_test.go: internal/store/postgres_integration_test.go:67:45: undefined: storeTaskPatchStatus",
+      "source": "verify_fix",
+      "bead_path": "taskboard/internal/store/postgres_integration_test.go",
+      "hits": 1,
+      "updated_at": "2026-11-26T19:34:59Z"
     }
   ]
 }
