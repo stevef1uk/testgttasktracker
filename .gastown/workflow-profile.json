@@ -151,12 +151,13 @@
       }
     ],
     "explicit_delivery_contract": true,
-    "active_phase_id": "phase-4-deploy",
+    "active_phase_id": "phase-5-release",
     "completed_phase_ids": [
       "phase-1-core",
       "phase-1-app",
       "phase-2-kanban",
-      "phase-3-browser"
+      "phase-3-browser",
+      "phase-4-deploy"
     ],
     "spec_summary": "",
     "min_architecture_bytes": 3200,
