@@ -22,6 +22,7 @@ func NewAPI(s store.Store) http.Handler {
 	a := &API{store: s}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", a.handleHealth)
+	mux.HandleFunc("/api/ready", a.handleReady)
 	mux.HandleFunc("/api/projects", a.handleProjects)
 	mux.HandleFunc("/api/projects/", a.handleProjectByPath)
 	mux.HandleFunc("/api/tasks/", a.handleTaskByID)
@@ -55,6 +56,19 @@ func (a *API) handleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// handleReady reports 200 when the store answers a ping and 503 otherwise.
+func (a *API) handleReady(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	if err := a.store.Ping(r.Context()); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 func (a *API) handleProjects(w http.ResponseWriter, r *http.Request) {

@@ -16,6 +16,7 @@ import (
 	"taskboard/internal/config"
 	"taskboard/internal/store"
 	"taskboard/internal/web"
+	webassets "taskboard/web"
 )
 
 func main() {
@@ -44,7 +45,7 @@ func run() error {
 		}
 	}()
 
-	app, err := web.NewApp(s)
+	app, err := web.NewApp(s, webassets.Templates)
 	if err != nil {
 		return fmt.Errorf("build app: %w", err)
 	}
@@ -96,7 +97,11 @@ func openStore(ctx context.Context, cfg config.Config) (store.Store, error) {
 		}
 		return s, nil
 	case "postgres":
-		return nil, errors.New("postgres driver is not yet available in this build")
+		s, err := store.OpenPostgres(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("open postgres: %w", err)
+		}
+		return s, nil
 	default:
 		return nil, fmt.Errorf("unsupported driver %q", cfg.Driver)
 	}

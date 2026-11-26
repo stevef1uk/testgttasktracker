@@ -6,13 +6,12 @@ import (
 	"net/http"
 
 	"taskboard/internal/store"
-	webassets "taskboard/web"
 )
 
 // NewApp returns the root HTTP handler: the embedded index page at "/" and
 // the JSON API mounted under "/api/".
-func NewApp(s store.Store) (http.Handler, error) {
-	index, err := fs.ReadFile(webassets.Templates, "templates/index.html")
+func NewApp(s store.Store, assets fs.FS) (http.Handler, error) {
+	index, err := fs.ReadFile(assets, "templates/index.html")
 	if err != nil {
 		return nil, fmt.Errorf("read index template: %w", err)
 	}
