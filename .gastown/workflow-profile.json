@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-11-24T17:28:52Z",
+  "generated_at": "2026-11-26T17:17:34Z",
   "source": "deterministic",
   "confidence": "high",
   "validation": {
     "layout_root": "taskboard",
     "bead_title_contains": "Implement taskboard/",
     "unittest_module": "",
-    "qa_verify_command": "cd taskboard && go test ./...",
+    "qa_verify_command": "cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright",
     "test_runner": "go",
     "required_files": [
       "taskboard/go.mod",
@@ -56,7 +56,7 @@
           "taskboard/internal/store/sqlite.go"
         ],
         "qa_verify_command": "cd taskboard && go mod verify && go test ./internal/config ./internal/model ./internal/store",
-        "spec_focus": "Phase 1a — Go foundation, configuration, models, SQLite store"
+        "spec_focus": "Go foundation, configuration, models, SQLite store"
       },
       {
         "id": "phase-1-app",
@@ -72,40 +72,18 @@
           "taskboard/web/templates/index.html",
           "taskboard/internal/web/api_test.go"
         ],
-        "qa_verify_command": "cd taskboard && go test ./...",
+        "qa_verify_command": "cd taskboard && go build -o /tmp/taskboard-gate ./cmd/taskboard && go test ./... && (TASKBOARD_HOST=127.0.0.1 TASKBOARD_PORT=8080 /tmp/taskboard-gate >/tmp/taskboard-gate.log 2>&1 & PORT_PID=$!; ok=1; for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1 && ok=0 && break; sleep 1; done; kill $PORT_PID 2>/dev/null; wait $PORT_PID 2>/dev/null; exit $ok)",
         "depends_on": [
           "phase-1-core"
         ],
-        "spec_focus": "Phase 1b — PostgreSQL store and runnable project API",
+        "spec_focus": "PostgreSQL store and runnable project API",
         "file_dependencies": {
           "taskboard/cmd/taskboard/main.go": [
             "taskboard/internal/config/config.go",
-            "taskboard/internal/store/sqlite.go",
-            "taskboard/internal/store/postgres.go",
-            "taskboard/internal/web/app.go"
+            "taskboard/internal/store/sqlite.go"
           ],
           "taskboard/internal/store/postgres.go": [
             "taskboard/internal/store/store.go"
-          ],
-          "taskboard/internal/store/postgres_integration_test.go": [
-            "taskboard/internal/store/postgres.go"
-          ],
-          "taskboard/internal/store/store_test.go": [
-            "taskboard/internal/store/sqlite.go"
-          ],
-          "taskboard/internal/web/api.go": [
-            "taskboard/internal/web/app.go"
-          ],
-          "taskboard/internal/web/api_test.go": [
-            "taskboard/internal/web/api.go"
-          ],
-          "taskboard/internal/web/app.go": [
-            "taskboard/internal/config/config.go",
-            "taskboard/internal/store/store.go",
-            "taskboard/web/assets.go"
-          ],
-          "taskboard/web/assets.go": [
-            "taskboard/web/templates/index.html"
           ]
         }
       },
@@ -122,17 +100,11 @@
         "depends_on": [
           "phase-1-app"
         ],
-        "spec_focus": "Phase 2 — Tasks, Kanban UI, and full Go tests",
+        "spec_focus": "Tasks, Kanban UI, and full Go tests",
         "file_dependencies": {
-          "taskboard/internal/web/app_test.go": [
-            "taskboard/web/static/app.js",
-            "taskboard/web/static/style.css",
-            "taskboard/internal/web/app.go"
-          ],
           "taskboard/internal/web/ui_content_test.go": [
-            "taskboard/web/static/app.js",
-            "taskboard/web/static/style.css",
-            "taskboard/web/assets.go"
+            "taskboard/web/assets.go",
+            "taskboard/web/static/app.js"
           ]
         }
       },
@@ -149,13 +121,7 @@
         "depends_on": [
           "phase-2-kanban"
         ],
-        "spec_focus": "Phase 3 — Playwright integration and browser QA",
-        "file_dependencies": {
-          "taskboard/playwright/taskboard.spec.ts": [
-            "taskboard/playwright.config.ts",
-            "taskboard/package.json"
-          ]
-        }
+        "spec_focus": "Playwright integration and browser QA"
       },
       {
         "id": "phase-4-deploy",
@@ -171,30 +137,17 @@
         "depends_on": [
           "phase-3-browser"
         ],
-        "spec_focus": "Phase 4 — Container build and k3s deployment artifacts",
-        "file_dependencies": {
-          "taskboard/Dockerfile": [
-            "taskboard/go.mod",
-            "taskboard/go.sum",
-            "taskboard/cmd/taskboard/main.go",
-            "taskboard/internal/web/app.go",
-            "taskboard/internal/web/api.go",
-            "taskboard/web/assets.go",
-            "taskboard/web/templates/index.html",
-            "taskboard/web/static/app.js",
-            "taskboard/web/static/style.css"
-          ]
-        }
+        "spec_focus": "Container build and k3s deployment artifacts"
       },
       {
         "id": "phase-5-release",
         "title": "Final integration and release QA",
         "required_files": [],
-        "qa_verify_command": "cd taskboard && go test ./...",
+        "qa_verify_command": "cd taskboard && go test ./... && ./node_modules/.bin/playwright test --config playwright.config.ts playwright",
         "depends_on": [
           "phase-4-deploy"
         ],
-        "spec_focus": "Phase 5 — Final integration and release QA"
+        "spec_focus": "Final integration and release QA"
       }
     ],
     "explicit_delivery_contract": true,
