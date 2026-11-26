@@ -9,9 +9,18 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
-    baseURL: process.env.BASE_URL || 'http://app:8080',
+    baseURL: process.env.BASE_URL || 'http://127.0.0.1:8080',
     trace: 'on-first-retry',
   },
+  webServer: process.env.BASE_URL
+    ? undefined
+    : {
+        command: 'go run ./cmd/taskboard',
+        cwd: __dirname,
+        url: 'http://127.0.0.1:8080/',
+        reuseExistingServer: true,
+        timeout: 120000,
+      },
   projects: [
     {
       name: 'chromium',
