@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"taskboard/internal/model"
 	"taskboard/internal/store"
 	"taskboard/internal/web"
+	webassets "taskboard/web"
 )
 
 // fakeStore is an in-memory store.Store used to exercise the HTTP layer.
@@ -245,4 +247,131 @@ type failingStore struct {
 
 func (failingStore) ListProjects(ctx context.Context) ([]model.Project, error) {
 	return nil, errors.New("boom")
+}
+
+// pingFailStore wraps a store and fails Ping, simulating an unavailable database.
+type pingFailStore struct {
+	store.Store
+}
+
+func (pingFailStore) Ping(ctx context.Context) error {
+	return errors.New("down")
+}
+
+func TestReadyReports200WhenHealthy(t *testing.T) {
+	h := web.NewAPI(newFakeStore())
+	rr := do(t, h, http.MethodGet, "/api/ready", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	var got map[string]string
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got["status"] != "ready" || len(got) != 1 {
+		t.Fatalf("body = %v, want {\"status\":\"ready\"}", got)
+	}
+}
+
+func TestReadyReports503WhenPingFails(t *testing.T) {
+	h := web.NewAPI(pingFailStore{Store: newFakeStore()})
+	rr := do(t, h, http.MethodGet, "/api/ready", "")
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", rr.Code)
+	}
+	var got map[string]string
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got["error"] != "database unavailable" || len(got) != 1 {
+		t.Fatalf("body = %v, want {\"error\":\"database unavailable\"}", got)
+	}
+}
+
+func TestDeleteProjectReturns204AndRemovesFromList(t *testing.T) {
+	h := web.NewAPI(newFakeStore())
+	created := do(t, h, http.MethodPost, "/api/projects", `{"name":"Gone"}`)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201", created.Code)
+	}
+	var p model.Project
+	if err := json.Unmarshal(created.Body.Bytes(), &p); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	rr := do(t, h, http.MethodDelete, fmt.Sprintf("/api/projects/%d", p.ID), "")
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("delete status = %d, want 204", rr.Code)
+	}
+	if rr.Body.Len() != 0 {
+		t.Fatalf("delete body = %q, want empty", rr.Body.String())
+	}
+
+	list := do(t, h, http.MethodGet, "/api/projects", "")
+	if list.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want 200", list.Code)
+	}
+	var projects []model.Project
+	if err := json.Unmarshal(list.Body.Bytes(), &projects); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	for _, got := range projects {
+		if got.ID == p.ID {
+			t.Fatalf("deleted project %d still listed", p.ID)
+		}
+	}
+}
+
+func TestListProjectsAscendingIDOrder(t *testing.T) {
+	h := web.NewAPI(newFakeStore())
+	for _, name := range []string{"One", "Two", "Three"} {
+		rr := do(t, h, http.MethodPost, "/api/projects", fmt.Sprintf(`{"name":%q}`, name))
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("create %s status = %d, want 201", name, rr.Code)
+		}
+	}
+	rr := do(t, h, http.MethodGet, "/api/projects", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	var projects []model.Project
+	if err := json.Unmarshal(rr.Body.Bytes(), &projects); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(projects) != 3 {
+		t.Fatalf("len = %d, want 3", len(projects))
+	}
+	for i := 1; i < len(projects); i++ {
+		if projects[i-1].ID >= projects[i].ID {
+			t.Fatalf("IDs not ascending: %d then %d", projects[i-1].ID, projects[i].ID)
+		}
+	}
+}
+
+func TestIndexServesRenderedShell(t *testing.T) {
+	app, err := web.NewApp(newFakeStore(), webassets.FS)
+	if err != nil {
+		t.Fatalf("NewApp: %v", err)
+	}
+	rr := do(t, app, http.MethodGet, "/", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	if ct := rr.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Fatalf("content type = %q, want text/html", ct)
+	}
+	if !strings.Contains(strings.ToLower(rr.Body.String()), "<html") {
+		t.Fatalf("body does not contain rendered index shell: %.200s", rr.Body.String())
+	}
+}
+
+func TestListProjectsStoreFailureIs500NotEmptyArray(t *testing.T) {
+	h := web.NewAPI(failingStore{Store: newFakeStore()})
+	rr := do(t, h, http.MethodGet, "/api/projects", "")
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rr.Code)
+	}
+	if got := strings.TrimSpace(rr.Body.String()); got == "[]" {
+		t.Fatalf("store failure returned empty array body %q", got)
+	}
 }

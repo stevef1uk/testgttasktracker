@@ -17,13 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "QA lesson: {\"summary\":\"Stage 1 (spec compliance): 2 defects",
-      "source": "qa_rework",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:20:58Z"
-    },
-    {
-      "stack": "go",
       "rule": "Avoid in api.go: internal/web/api.go:149:10: undefined: taskCreateRequest",
       "source": "verify_fix",
       "bead_path": "taskboard/internal/web/api.go",
@@ -58,6 +51,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T20:53:27Z"
+    },
+    {
+      "stack": "go",
+      "rule": "Test review lesson: Repair implementation beads: ta-is1",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T20:56:00Z"
     }
   ]
 }
