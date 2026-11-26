@@ -6,7 +6,7 @@
 Requirement: Config parses TASKBOARD_* env vars with defaults, rejects invalid driver, port, and empty PostgreSQL URL, and redacts passwords; model enforces trimmed Unicode code-point limits (name 80, title 120, description 1000), enum status/priority, and nonempty PATCH; SQLite store initializes schema idempotently, enforces foreign keys, filters, patches, cascades deletes, and persists across reopen.
 Level: unit
 Test file: taskboard/internal/model/model_test.go, taskboard/internal/config/config_test.go, taskboard/internal/store/sqlite_test.go
-Bead ID: model_test.go → ta-ne6 (model.go); config_test.go → ta-xlw (config.go); sqlite_test.go → ta-nlw (sqlite.go, reopened for these tests); store.go contract exercised via ta-29f
+Bead ID: ta-ne6, ta-xlw, ta-nlw
 Phase: phase-1-core
 Scenarios:
 - Model: names and titles are trimmed; 80/120/1000 code-point boundaries accepted and rejected at +1 (multi-byte runes counted once).
@@ -33,7 +33,7 @@ Assertions:
 Requirement: PostgreSQL store implements the same contract with advisory-locked idempotent schema init; cmd/taskboard starts, shuts down on SIGTERM, and serves api health, api ready, project routes, and the embedded index.html shell; project create/list/delete round-trips over HTTP.
 Level: integration
 Test file: taskboard/internal/store/store_test.go, taskboard/internal/store/postgres_integration_test.go, taskboard/internal/web/api_test.go
-Bead ID: store_test.go → ta-en7; postgres_integration_test.go → ta-8pf; api_test.go → ta-is1
+Bead ID: ta-en7, ta-8pf, ta-is1
 Phase: phase-1-app
 Scenarios:
 - Shared store contract runs against SQLite always and PostgreSQL only when TASKBOARD_TEST_POSTGRES_URL is set.
@@ -55,7 +55,7 @@ Assertions:
 Requirement: Task CRUD over HTTP with validation, server-controlled status/IDs/timestamps on create, AND-combined filters, Kanban UI with project selector, forms, move-forward, edit, delete, visible errors, and empty states; embedded static assets served with correct content types.
 Level: integration
 Test file: taskboard/internal/web/app_test.go, taskboard/internal/web/ui_content_test.go
-Bead ID: pending — phase-2-kanban beads to be created by planning (app_test.go and ui_content_test.go each need a unique owner bead)
+Bead ID: pending
 Phase: phase-2-kanban
 Scenarios:
 - POST project tasks returns 201 with status todo even when the client sends status, id, or timestamps.
@@ -76,7 +76,7 @@ Assertions:
 Requirement: Playwright E2E drives the running app through real browser controls: initial shell with three columns; create project and task, Move forward To Do to Doing to Done, delete task; filter to high priority and reset.
 Level: ui
 Test file: taskboard/playwright/taskboard.spec.ts
-Bead ID: pending — phase-3-browser beads to be created by planning
+Bead ID: pending
 Phase: phase-3-browser
 Scenarios:
 - Initial page shows TaskBoard heading and To Do, Doing, Done columns.
