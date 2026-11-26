@@ -17,14 +17,6 @@
     },
     {
       "stack": "go",
-      "rule": "Avoid in api.go: internal/web/api.go:149:10: undefined: taskCreateRequest",
-      "source": "verify_fix",
-      "bead_path": "taskboard/internal/web/api.go",
-      "hits": 1,
-      "updated_at": "2026-11-26T20:30:50Z"
-    },
-    {
-      "stack": "go",
       "rule": "QA lesson: Root cause: taskboard/internal/web/api.go (bead ta-rod, Polecat) implements task CRUD routes ahead of phase-1-app scope",
       "source": "qa_rework",
       "hits": 1,
@@ -58,6 +50,13 @@
       "source": "qa_rework",
       "hits": 1,
       "updated_at": "2026-11-26T20:56:00Z"
+    },
+    {
+      "stack": "go",
+      "rule": "QA lesson: {\"summary\":\"Stage 1: one spec-compliance defect in the phase-1-app HTML shell",
+      "source": "qa_rework",
+      "hits": 1,
+      "updated_at": "2026-11-26T21:02:10Z"
     }
   ]
 }
